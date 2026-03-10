@@ -31,7 +31,15 @@ import { AuthService } from '../../../core/auth/auth.service';
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="password">Contraseña</label>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label class="form-label" for="password" style="margin-bottom:0;">Contraseña</label>
+              <a routerLink="/auth/forgot-password"
+                style="font-family:'Inter',sans-serif;font-size:11px;color:#666;text-decoration:none;letter-spacing:0.03em;"
+                onmouseover="this.style.color='#B71C1C'"
+                onmouseout="this.style.color='#666'">
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
             <input
               id="password"
               type="password"
