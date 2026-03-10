@@ -56,7 +56,7 @@ interface ClientePlan {
       </div>
 
       <!-- Estado de pago (solo usuarios) -->
-      @if (auth.rol() === 'usuario' && cliente()) {
+      @if (auth.rol() === 'atleta' && cliente()) {
         <div class="data-table-wrapper">
           <div class="data-table-wrapper__header">
             <span class="data-table-wrapper__title">Mi Plan</span>

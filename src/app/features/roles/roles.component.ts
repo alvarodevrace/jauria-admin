@@ -11,7 +11,7 @@ interface Profile {
   id: string;
   nombre_completo: string;
   email: string;
-  rol: 'usuario' | 'coach' | 'admin';
+  rol: 'atleta' | 'coach' | 'admin';
   activo: boolean;
   created_at: string;
 }
@@ -24,14 +24,14 @@ interface Profile {
     <div class="page-header">
       <span class="page-header__eyebrow">Sistema</span>
       <h2 class="page-header__title">Gestión de Roles</h2>
-      <p class="page-header__subtitle">{{ profiles().length }} usuarios registrados</p>
+      <p class="page-header__subtitle">{{ profiles().length }} personas registradas</p>
     </div>
 
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Usuarios del Sistema</span>
         <div class="search-input">
-          <input type="text" placeholder="Buscar usuario..." [(ngModel)]="searchTerm" (input)="applyFilter()" />
+          <input type="text" placeholder="Buscar..." [(ngModel)]="searchTerm" (input)="applyFilter()" />
         </div>
       </div>
 
@@ -80,7 +80,7 @@ interface Profile {
                         (ngModelChange)="cambiarRol(p, $event)"
                         [disabled]="changing() === p.id"
                       >
-                        <option value="usuario">usuario</option>
+                        <option value="atleta">Atleta</option>
                         <option value="coach">coach</option>
                         <option value="admin">admin</option>
                       </select>
@@ -94,7 +94,7 @@ interface Profile {
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">Sin usuarios registrados.</td></tr>
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">Sin personas registradas.</td></tr>
             }
           </tbody>
         </table>
@@ -162,6 +162,6 @@ export class RolesComponent implements OnInit {
   }
 
   rolBadge(rol: string): string {
-    return ({ admin: 'activo', coach: 'pendiente', usuario: 'inactivo' } as Record<string, string>)[rol] ?? 'inactivo';
+    return ({ admin: 'activo', coach: 'pendiente', atleta: 'inactivo' } as Record<string, string>)[rol] ?? 'inactivo';
   }
 }

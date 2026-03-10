@@ -59,7 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'mi-pago',
-        canActivate: [roleGuard], data: { roles: ['usuario'] },
+        canActivate: [roleGuard], data: { roles: ['atleta'] },
         loadComponent: () => import('./features/mi-pago/mi-pago.component').then(m => m.MiPagoComponent),
       },
       {

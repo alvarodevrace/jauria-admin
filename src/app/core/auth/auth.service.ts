@@ -10,7 +10,7 @@ export interface UserProfile {
   id_cliente: string | null;
   nombre_completo: string;
   email: string;
-  rol: 'usuario' | 'coach' | 'admin';
+  rol: 'atleta' | 'coach' | 'admin';
   avatar_url: string | null;
   activo: boolean;
 }
@@ -67,7 +67,7 @@ export class AuthService {
         id: user.id,
         nombre_completo: user.user_metadata['nombre_completo'] ?? user.email ?? 'Usuario',
         email: user.email ?? '',
-        rol: 'usuario',
+        rol: 'atleta',
         activo: true,
       };
       const { data: created } = await this.supabase.client.from('profiles').insert(newProfile).select().single();

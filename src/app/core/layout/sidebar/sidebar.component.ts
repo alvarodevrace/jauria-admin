@@ -38,7 +38,7 @@ import { AuthService } from '../../auth/auth.service';
           <span>Mi Cuenta</span>
         </a>
 
-        @if (auth.rol() === 'usuario') {
+        @if (auth.rol() === 'atleta') {
           <a class="sidebar__item" routerLink="/app/mi-pago" routerLinkActive="active" (click)="close()">
             <span class="sidebar__item-icon">💳</span>
             <span>Mi Pago</span>

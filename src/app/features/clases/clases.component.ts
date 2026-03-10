@@ -42,6 +42,14 @@ type Vista = 'semana' | 'lista';
       <h2 class="page-header__title">Clases</h2>
     </div>
 
+    <!-- Alerta membresía inactiva (solo atletas) -->
+    @if (!auth.isCoach() && membresiaActiva() === false) {
+      <div class="alert alert--error" style="margin-bottom:20px;">
+        <strong>Membresía inactiva</strong> — Tu plan no está activo. No puedes inscribirte a clases.
+        Ve a <strong>Mi Pago</strong> para ver el estado de tu membresía o contacta al coach.
+      </div>
+    }
+
     <!-- Toolbar -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
       <!-- Navegación de semana -->
@@ -147,7 +155,11 @@ type Vista = 'semana' | 'lista';
                   <td style="font-size:13px;">{{ c.capacidad_maxima }} personas</td>
                   <td>
                     <div class="data-table__actions">
-                      <button class="btn btn--ghost btn--sm" (click)="inscribirseOCancelar(c)" [disabled]="loadingClase() === c.id">
+                      <button class="btn btn--ghost btn--sm"
+                        (click)="inscribirseOCancelar(c)"
+                        [disabled]="loadingClase() === c.id || (!inscritoEn(c.id) && !membresiaActiva())"
+                        [title]="!membresiaActiva() && !inscritoEn(c.id) ? 'Membresía no activa' : ''"
+                      >
                         {{ inscritoEn(c.id) ? '✕ Cancelar' : '✓ Inscribirse' }}
                       </button>
                       <button class="btn btn--ghost btn--sm" (click)="verClase(c)" title="Ver inscritos">👥</button>
@@ -247,7 +259,11 @@ type Vista = 'semana' | 'lista';
               <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#fff;text-transform:uppercase;">
                 Inscritos ({{ inscritos().length }} / {{ claseSeleccionada()!.capacidad_maxima }})
               </span>
-              <button class="btn btn--primary btn--sm" (click)="inscribirseOCancelar(claseSeleccionada()!)" [disabled]="loadingClase() === claseSeleccionada()!.id">
+              <button class="btn btn--primary btn--sm"
+                (click)="inscribirseOCancelar(claseSeleccionada()!)"
+                [disabled]="loadingClase() === claseSeleccionada()!.id || (!inscritoEn(claseSeleccionada()!.id) && !membresiaActiva())"
+                [title]="!membresiaActiva() && !inscritoEn(claseSeleccionada()!.id) ? 'Membresía no activa' : ''"
+              >
                 {{ inscritoEn(claseSeleccionada()!.id) ? '✕ Cancelar inscripción' : '✓ Inscribirse' }}
               </button>
             </div>
@@ -391,14 +407,17 @@ export class ClasesComponent implements OnInit {
   private toast   = inject(ToastService);
   private sentry  = inject(SentryService);
 
-  clases     = signal<Clase[]>([]);
-  inscritos  = signal<Inscripcion[]>([]);
-  misInscritas = signal<number[]>([]); // ids de clases donde el usuario está inscrito
+  clases       = signal<Clase[]>([]);
+  inscritos    = signal<Inscripcion[]>([]);
+  misInscritas = signal<number[]>([]);
 
-  loading        = signal(true);
+  // Estado de membresía del atleta logueado
+  membresiaActiva = signal<boolean | null>(null); // null = cargando
+
+  loading          = signal(true);
   inscritosLoading = signal(false);
-  savingClase    = signal(false);
-  loadingClase   = signal<number | null>(null);
+  savingClase      = signal(false);
+  loadingClase     = signal<number | null>(null);
 
   vista           = signal<Vista>('semana');
   showFormClase   = signal(false);
@@ -430,8 +449,34 @@ export class ClasesComponent implements OnInit {
   newClase = this.emptyClase();
 
   async ngOnInit() {
-    await this.cargarClases();
-    await this.cargarMisInscripciones();
+    await Promise.all([
+      this.cargarClases(),
+      this.cargarMisInscripciones(),
+      this.verificarMembresia(),
+    ]);
+  }
+
+  /** Verifica si el atleta logueado tiene membresía activa.
+   *  Coach y admin siempre pueden inscribirse (gestionan el gym). */
+  async verificarMembresia() {
+    // Coach y admin no necesitan membresía para inscribirse
+    if (this.auth.isCoach()) {
+      this.membresiaActiva.set(true);
+      return;
+    }
+
+    const idCliente = this.auth.profile()?.id_cliente;
+    if (!idCliente) {
+      // Sin cliente vinculado → no puede inscribirse
+      this.membresiaActiva.set(false);
+      return;
+    }
+
+    const { data } = await this.supabase.getCliente(idCliente);
+    if (!data) { this.membresiaActiva.set(false); return; }
+
+    // Solo estado 'Activo' permite inscribirse
+    this.membresiaActiva.set((data as { estado: string }).estado === 'Activo');
   }
 
   semanaAnterior() { this.semanaBase.update(d => subWeeks(d, 1)); this.cargarClases(); }
@@ -504,6 +549,16 @@ export class ClasesComponent implements OnInit {
     const userId = this.auth.currentUser()?.id;
     if (!userId) { this.toast.error('Debes iniciar sesión'); return; }
 
+    // Verificar membresía activa antes de inscribirse (no aplica al cancelar)
+    if (!this.inscritoEn(clase.id) && !this.membresiaActiva()) {
+      if (this.membresiaActiva() === false) {
+        this.toast.error('Tu membresía no está activa. Contacta al coach para renovar tu plan.');
+      } else {
+        this.toast.error('Verificando membresía, intenta de nuevo en un momento.');
+      }
+      return;
+    }
+
     this.loadingClase.set(clase.id);
 
     if (this.inscritoEn(clase.id)) {
@@ -511,7 +566,7 @@ export class ClasesComponent implements OnInit {
       this.misInscritas.update(ids => ids.filter(id => id !== clase.id));
       this.toast.info('Inscripción cancelada');
     } else {
-      // Verificar cupos
+      // Verificar cupos disponibles
       const { data: ins } = await this.supabase.getInscripcionesByClase(clase.id);
       const ocupados = ins?.length ?? 0;
       if (ocupados >= clase.capacidad_maxima) {
