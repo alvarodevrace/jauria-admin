@@ -1,4 +1,4 @@
-@use 'variables' as v;
+@use "variables" as v;
 
 // =============================================
 // ADMIN LAYOUT
@@ -87,7 +87,8 @@ $topbar-height: 64px;
     width: 100%;
     text-align: left;
 
-    svg, .icon {
+    svg,
+    .icon {
       width: 18px;
       height: 18px;
       flex-shrink: 0;
@@ -103,7 +104,8 @@ $topbar-height: 64px;
       background: rgba(v.$color-primary, 0.15);
       border-right: 2px solid v.$color-primary;
 
-      svg, .icon {
+      svg,
+      .icon {
         color: v.$color-primary;
       }
     }
@@ -200,7 +202,6 @@ $topbar-height: 64px;
 // =============================================
 
 .main-content {
-  margin-left: $sidebar-width;
   padding-top: $topbar-height;
   flex: 1;
   min-height: 100vh;
@@ -283,8 +284,12 @@ $topbar-height: 64px;
     font-size: 12px;
     color: v.$color-muted;
 
-    &.up { color: #4caf50; }
-    &.down { color: v.$color-primary; }
+    &.up {
+      color: #4caf50;
+    }
+    &.down {
+      color: v.$color-primary;
+    }
   }
 }
 
@@ -375,7 +380,7 @@ $topbar-height: 64px;
   white-space: nowrap;
 
   &::before {
-    content: '';
+    content: "";
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -384,43 +389,57 @@ $topbar-height: 64px;
   &--activo {
     background: rgba(76, 175, 80, 0.15);
     color: #4caf50;
-    &::before { background: #4caf50; }
+    &::before {
+      background: #4caf50;
+    }
   }
 
   &--pendiente {
     background: rgba(255, 152, 0, 0.15);
     color: #ff9800;
-    &::before { background: #ff9800; }
+    &::before {
+      background: #ff9800;
+    }
   }
 
   &--vencido {
     background: rgba(v.$color-primary, 0.15);
     color: #ef5350;
-    &::before { background: #ef5350; }
+    &::before {
+      background: #ef5350;
+    }
   }
 
   &--inactivo {
     background: rgba(v.$color-muted, 0.15);
     color: v.$color-muted;
-    &::before { background: v.$color-muted; }
+    &::before {
+      background: v.$color-muted;
+    }
   }
 
   &--completado {
     background: rgba(76, 175, 80, 0.15);
     color: #4caf50;
-    &::before { background: #4caf50; }
+    &::before {
+      background: #4caf50;
+    }
   }
 
   &--fallido {
     background: rgba(v.$color-primary, 0.15);
     color: #ef5350;
-    &::before { background: #ef5350; }
+    &::before {
+      background: #ef5350;
+    }
   }
 
   &--esperando {
     background: rgba(33, 150, 243, 0.15);
     color: #42a5f5;
-    &::before { background: #42a5f5; }
+    &::before {
+      background: #42a5f5;
+    }
   }
 
   &--mensual {
@@ -502,7 +521,7 @@ $topbar-height: 64px;
     color: v.$color-white;
 
     &:hover {
-      background: darken(#B71C1C, 8%);
+      background: darken(#b71c1c, 8%);
       transform: translateY(-1px);
     }
   }
@@ -700,10 +719,18 @@ $topbar-height: 64px;
     flex: 1;
   }
 
-  &--success { border-left: 3px solid #4caf50; }
-  &--error   { border-left: 3px solid #ef5350; }
-  &--info    { border-left: 3px solid #42a5f5; }
-  &--warning { border-left: 3px solid #ff9800; }
+  &--success {
+    border-left: 3px solid #4caf50;
+  }
+  &--error {
+    border-left: 3px solid #ef5350;
+  }
+  &--info {
+    border-left: 3px solid #42a5f5;
+  }
+  &--warning {
+    border-left: 3px solid #ff9800;
+  }
 }
 
 // =============================================
@@ -776,7 +803,9 @@ $topbar-height: 64px;
     width: 240px;
     transition: border-color v.$transition-fast;
 
-    &::placeholder { color: v.$color-muted; }
+    &::placeholder {
+      color: v.$color-muted;
+    }
     &:focus {
       outline: none;
       border-color: v.$color-primary;
