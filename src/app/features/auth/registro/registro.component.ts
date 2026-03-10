@@ -13,7 +13,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       <div class="auth-card">
         <div class="auth-card__header">
           <h1 class="auth-card__title">JAURÍA</h1>
-          <p class="auth-card__subtitle">Crear Cuenta</p>
+          <p class="auth-card__subtitle">Activar cuenta de atleta</p>
         </div>
 
         <!-- Instrucción al atleta -->
@@ -62,7 +62,8 @@ import { SupabaseService } from '../../../core/services/supabase.service';
         }
 
         <p class="auth-card__footer">
-          ¿Ya tienes cuenta? <a routerLink="/auth/login">Ingresar</a>
+          ¿Ya tienes cuenta? <a routerLink="/auth/login">Ingresar</a><br>
+          ¿Eres coach o admin? <a routerLink="/auth/login">Volver al acceso del panel</a>
         </p>
       </div>
     </div>

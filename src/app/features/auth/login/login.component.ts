@@ -12,7 +12,12 @@ import { AuthService } from '../../../core/auth/auth.service';
       <div class="auth-card">
         <div class="auth-card__header">
           <h1 class="auth-card__title">JAURÍA</h1>
-          <p class="auth-card__subtitle">Panel Administrativo</p>
+          <p class="auth-card__subtitle">Ingreso al panel</p>
+        </div>
+
+        <div class="auth-card__notice">
+          <strong>Coach y admin:</strong> ingresa con tu cuenta del panel.
+          Si eres atleta nuevo, activa tu cuenta solo después de que el coach registre tu membresía.
         </div>
 
         <form (ngSubmit)="onSubmit()" class="auth-form">
@@ -65,9 +70,10 @@ import { AuthService } from '../../../core/auth/auth.service';
           </button>
         </form>
 
-        <p class="auth-card__footer">
-          ¿Sin cuenta? <a routerLink="/auth/registro">Regístrate</a>
-        </p>
+        <div class="auth-card__footer auth-card__footer--stack">
+          <span>¿Eres atleta y ya tienes membresía activa?</span>
+          <a routerLink="/auth/registro">Activar cuenta de atleta</a>
+        </div>
       </div>
     </div>
   `,
@@ -124,6 +130,22 @@ import { AuthService } from '../../../core/auth/auth.service';
           &:hover { text-decoration: underline; }
         }
       }
+
+      &__notice {
+        margin-bottom: 20px;
+        padding: 14px 16px;
+        border-left: 3px solid #B71C1C;
+        background: #1e1e1e;
+        border-radius: 8px;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #aaa;
+
+        strong {
+          color: #fff;
+        }
+      }
     }
 
     .auth-form {
@@ -133,6 +155,12 @@ import { AuthService } from '../../../core/auth/auth.service';
         padding: 12px;
         font-size: 14px;
       }
+    }
+
+    .auth-card__footer--stack {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
   `],
 })
@@ -162,5 +190,6 @@ export class LoginComponent {
     const rol = this.auth.rol();
     const dest = rol === 'admin' ? '/app/dashboard' : '/app/clases';
     this.router.navigate([dest]);
+    this.loading.set(false);
   }
 }
