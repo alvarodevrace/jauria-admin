@@ -62,16 +62,34 @@ export class AuthService {
         Sentry.setUser({ id: p.id, email: p.email, username: p.nombre_completo, segment: p.rol });
       }
     } else if (error?.code === 'PGRST116') {
-      // Crear perfil automáticamente si no existe
+      // Perfil no existe — buscamos si el email tiene un cliente vinculado
+      let idCliente: string | null = null;
+      if (user.email) {
+        const { data: clienteData } = await this.supabase.client
+          .from('clientes')
+          .select('id_cliente')
+          .eq('email', user.email.toLowerCase())
+          .limit(1);
+        idCliente = (clienteData?.[0] as { id_cliente?: string } | undefined)?.id_cliente ?? null;
+      }
+
       const newProfile = {
         id: user.id,
-        nombre_completo: user.user_metadata['nombre_completo'] ?? user.email ?? 'Usuario',
+        id_cliente: idCliente,
+        nombre_completo: user.user_metadata['nombre_completo'] ?? user.email ?? 'Atleta',
         email: user.email ?? '',
         rol: 'atleta',
         activo: true,
       };
-      const { data: created } = await this.supabase.client.from('profiles').insert(newProfile).select().single();
-      if (created) this._profile.set(created as UserProfile);
+      const { data: created } = await this.supabase.client
+        .from('profiles').insert(newProfile).select().single();
+      if (created) {
+        this._profile.set(created as UserProfile);
+        if (environment.sentryDsn) {
+          const p = created as UserProfile;
+          Sentry.setUser({ id: p.id, email: p.email, username: p.nombre_completo, segment: p.rol });
+        }
+      }
     }
   }
 
