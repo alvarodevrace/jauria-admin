@@ -1,0 +1,248 @@
+import { Component, inject, signal, HostListener } from '@angular/core';
+import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { filter } from 'rxjs';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-sidebar',
+  standalone: true,
+  imports: [RouterLink, RouterLinkActive, CommonModule],
+  template: `
+    <!-- Mobile overlay -->
+    @if (mobileOpen()) {
+      <div class="sidebar-overlay" (click)="close()"></div>
+    }
+
+    <aside class="sidebar" [class.open]="mobileOpen()">
+      <div class="sidebar__logo">
+        <div class="sidebar__logo-icon">J</div>
+        <div>
+          <span class="sidebar__logo-name">Jauría</span>
+          <span class="sidebar__logo-sub">Admin Panel</span>
+        </div>
+      </div>
+
+      <nav class="sidebar__nav">
+
+        <!-- General — todos los roles -->
+        <span class="sidebar__section-label">General</span>
+
+        <a class="sidebar__item" routerLink="/app/clases" routerLinkActive="active" (click)="close()">
+          <span class="sidebar__item-icon">🏋️</span>
+          <span>Clases</span>
+        </a>
+
+        <a class="sidebar__item" routerLink="/app/mi-cuenta" routerLinkActive="active" (click)="close()">
+          <span class="sidebar__item-icon">👤</span>
+          <span>Mi Cuenta</span>
+        </a>
+
+        @if (auth.rol() === 'usuario') {
+          <a class="sidebar__item" routerLink="/app/mi-pago" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">💳</span>
+            <span>Mi Pago</span>
+          </a>
+        }
+
+        <!-- Coach + Admin -->
+        @if (auth.isCoach()) {
+          <span class="sidebar__section-label">Gestión</span>
+
+          <a class="sidebar__item" routerLink="/app/clientes" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">👥</span>
+            <span>Clientes</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/pagos" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">💰</span>
+            <span>Pagos</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">💬</span>
+            <span>Conversaciones WA</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">⚙️</span>
+            <span>Configuración</span>
+          </a>
+        }
+
+        <!-- Admin only -->
+        @if (auth.isAdmin()) {
+          <span class="sidebar__section-label">Sistema</span>
+
+          <a class="sidebar__item" routerLink="/app/dashboard" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">📋</span>
+            <span>Leads</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/workflows" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">⚡</span>
+            <span>Workflows n8n</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">
+            <span class="sidebar__item-icon">🔑</span>
+            <span>Gestión de Roles</span>
+          </a>
+        }
+      </nav>
+
+      <div class="sidebar__footer">
+        <div class="sidebar__user-mini">
+          <div class="sidebar__user-avatar">{{ initials() }}</div>
+          <div class="sidebar__user-text">
+            <span class="sidebar__user-name">{{ firstName() }}</span>
+            <span class="sidebar__user-role">{{ auth.rol() }}</span>
+          </div>
+        </div>
+        <button class="sidebar__logout" (click)="auth.logout()" title="Cerrar sesión">
+          ↩
+        </button>
+      </div>
+    </aside>
+  `,
+  styles: [`
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 999;
+    }
+    .sidebar__logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar__logo-icon {
+      width: 36px;
+      height: 36px;
+      background: #B71C1C;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar__logo-name {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.05em;
+      color: #fff;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .sidebar__logo-sub {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2px;
+    }
+    .sidebar__item-icon {
+      font-size: 16px;
+      width: 20px;
+      flex-shrink: 0;
+    }
+    .sidebar__user-mini {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .sidebar__user-avatar {
+      width: 30px;
+      height: 30px;
+      background: #B71C1C;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar__user-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .sidebar__user-name {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sidebar__user-role {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      color: #666;
+      text-transform: capitalize;
+    }
+    .sidebar__footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar__logout {
+      background: none;
+      border: 1px solid #2a2a2a;
+      color: #666;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      &:hover { border-color: #B71C1C; color: #B71C1C; }
+    }
+  `],
+})
+export class SidebarComponent {
+  auth = inject(AuthService);
+  private router = inject(Router);
+  mobileOpen = signal(false);
+
+  constructor() {
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+      this.mobileOpen.set(false);
+    });
+  }
+
+  open()  { this.mobileOpen.set(true); }
+  close() { this.mobileOpen.set(false); }
+  toggle() { this.mobileOpen.update(v => !v); }
+
+  initials() {
+    const name = this.auth.profile()?.nombre_completo ?? '';
+    return name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase() || 'U';
+  }
+
+  firstName() {
+    const name = this.auth.profile()?.nombre_completo ?? 'Usuario';
+    return name.split(' ')[0] ?? 'Usuario';
+  }
+}

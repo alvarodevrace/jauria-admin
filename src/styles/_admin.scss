@@ -1,0 +1,918 @@
+@use 'variables' as v;
+
+// =============================================
+// ADMIN LAYOUT
+// =============================================
+
+$sidebar-width: 240px;
+$topbar-height: 64px;
+
+.admin-shell {
+  display: flex;
+  min-height: 100vh;
+  background: v.$color-bg;
+  color: v.$color-white;
+}
+
+// =============================================
+// SIDEBAR
+// =============================================
+
+.sidebar {
+  width: $sidebar-width;
+  min-height: 100vh;
+  background: v.$color-surface;
+  border-right: 1px solid v.$color-border;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: v.$z-navbar;
+  transition: transform v.$transition-normal;
+
+  &__logo {
+    padding: 20px 24px;
+    border-bottom: 1px solid v.$color-border;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    img {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    span {
+      font-family: v.$font-heading;
+      font-size: 18px;
+      letter-spacing: 0.05em;
+      color: v.$color-white;
+      text-transform: uppercase;
+    }
+  }
+
+  &__nav {
+    flex: 1;
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+
+  &__section-label {
+    font-family: v.$font-body;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: v.$color-muted;
+    padding: 16px 24px 6px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    color: v.$color-muted;
+    text-decoration: none;
+    font-family: v.$font-body;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all v.$transition-fast;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+
+    svg, .icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      color: v.$color-white;
+      background: v.$color-surface2;
+    }
+
+    &.active {
+      color: v.$color-white;
+      background: rgba(v.$color-primary, 0.15);
+      border-right: 2px solid v.$color-primary;
+
+      svg, .icon {
+        color: v.$color-primary;
+      }
+    }
+  }
+
+  &__footer {
+    padding: 16px 24px;
+    border-top: 1px solid v.$color-border;
+  }
+}
+
+// =============================================
+// TOPBAR
+// =============================================
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: $sidebar-width;
+  right: 0;
+  height: $topbar-height;
+  background: v.$color-surface;
+  border-bottom: 1px solid v.$color-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: v.$z-navbar - 1;
+
+  &__title {
+    font-family: v.$font-heading;
+    font-size: 20px;
+    letter-spacing: 0.05em;
+    color: v.$color-white;
+    text-transform: uppercase;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background v.$transition-fast;
+
+    &:hover {
+      background: v.$color-surface2;
+    }
+  }
+
+  &__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: v.$color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: v.$font-heading;
+    font-size: 14px;
+    color: v.$color-white;
+    flex-shrink: 0;
+  }
+
+  &__user-info {
+    display: flex;
+    flex-direction: column;
+
+    .name {
+      font-family: v.$font-body;
+      font-size: 13px;
+      font-weight: 600;
+      color: v.$color-white;
+    }
+
+    .role {
+      font-family: v.$font-body;
+      font-size: 11px;
+      color: v.$color-muted;
+      text-transform: capitalize;
+    }
+  }
+}
+
+// =============================================
+// MAIN CONTENT
+// =============================================
+
+.main-content {
+  margin-left: $sidebar-width;
+  padding-top: $topbar-height;
+  flex: 1;
+  min-height: 100vh;
+
+  &__inner {
+    padding: 32px;
+  }
+}
+
+// =============================================
+// PAGE HEADER
+// =============================================
+
+.page-header {
+  margin-bottom: 32px;
+
+  &__eyebrow {
+    font-family: v.$font-body;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: v.$color-primary;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  &__title {
+    font-family: v.$font-heading;
+    font-size: clamp(28px, 4vw, 40px);
+    letter-spacing: 0.03em;
+    color: v.$color-white;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+
+  &__subtitle {
+    font-family: v.$font-body;
+    font-size: 14px;
+    color: v.$color-muted;
+    margin: 0;
+  }
+}
+
+// =============================================
+// STAT CARDS
+// =============================================
+
+.stat-card {
+  background: v.$color-surface;
+  border: 1px solid v.$color-border;
+  border-radius: 12px;
+  padding: 24px;
+  transition: border-color v.$transition-fast;
+
+  &:hover {
+    border-color: v.$color-primary;
+  }
+
+  &__label {
+    font-family: v.$font-body;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: v.$color-muted;
+    margin-bottom: 12px;
+  }
+
+  &__value {
+    font-family: v.$font-heading;
+    font-size: 36px;
+    color: v.$color-white;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  &__trend {
+    font-family: v.$font-body;
+    font-size: 12px;
+    color: v.$color-muted;
+
+    &.up { color: #4caf50; }
+    &.down { color: v.$color-primary; }
+  }
+}
+
+// =============================================
+// DATA TABLE
+// =============================================
+
+.data-table-wrapper {
+  background: v.$color-surface;
+  border: 1px solid v.$color-border;
+  border-radius: 12px;
+  overflow: hidden;
+
+  &__header {
+    padding: 20px 24px;
+    border-bottom: 1px solid v.$color-border;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    font-family: v.$font-heading;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    color: v.$color-white;
+    text-transform: uppercase;
+  }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    font-family: v.$font-body;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: v.$color-muted;
+    padding: 12px 16px;
+    text-align: left;
+    background: v.$color-surface2;
+    border-bottom: 1px solid v.$color-border;
+  }
+
+  td {
+    font-family: v.$font-body;
+    font-size: 14px;
+    color: v.$color-text;
+    padding: 14px 16px;
+    border-bottom: 1px solid v.$color-border;
+    vertical-align: middle;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover td {
+    background: rgba(v.$color-white, 0.02);
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+// =============================================
+// BADGES
+// =============================================
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-family: v.$font-body;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  &--activo {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    &::before { background: #4caf50; }
+  }
+
+  &--pendiente {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+    &::before { background: #ff9800; }
+  }
+
+  &--vencido {
+    background: rgba(v.$color-primary, 0.15);
+    color: #ef5350;
+    &::before { background: #ef5350; }
+  }
+
+  &--inactivo {
+    background: rgba(v.$color-muted, 0.15);
+    color: v.$color-muted;
+    &::before { background: v.$color-muted; }
+  }
+
+  &--completado {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    &::before { background: #4caf50; }
+  }
+
+  &--fallido {
+    background: rgba(v.$color-primary, 0.15);
+    color: #ef5350;
+    &::before { background: #ef5350; }
+  }
+
+  &--esperando {
+    background: rgba(33, 150, 243, 0.15);
+    color: #42a5f5;
+    &::before { background: #42a5f5; }
+  }
+
+  &--mensual {
+    background: rgba(v.$color-primary, 0.1);
+    color: v.$color-primary;
+  }
+
+  &--trimestral {
+    background: rgba(156, 39, 176, 0.15);
+    color: #ba68c8;
+  }
+
+  &--anual {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+  }
+}
+
+// =============================================
+// STATUS INDICATOR
+// =============================================
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: v.$font-body;
+  font-size: 13px;
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &--online .dot {
+    background: #4caf50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  &--offline .dot {
+    background: #ef5350;
+  }
+
+  &--warning .dot {
+    background: #ff9800;
+  }
+
+  &--checking .dot {
+    background: v.$color-muted;
+  }
+}
+
+// =============================================
+// BUTTONS
+// =============================================
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: v.$font-body;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all v.$transition-fast;
+  border: none;
+  text-decoration: none;
+
+  &--primary {
+    background: v.$color-primary;
+    color: v.$color-white;
+
+    &:hover {
+      background: darken(#B71C1C, 8%);
+      transform: translateY(-1px);
+    }
+  }
+
+  &--secondary {
+    background: v.$color-surface2;
+    color: v.$color-white;
+    border: 1px solid v.$color-border;
+
+    &:hover {
+      border-color: v.$color-muted;
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: v.$color-muted;
+    border: 1px solid v.$color-border;
+
+    &:hover {
+      color: v.$color-white;
+      border-color: v.$color-muted;
+    }
+  }
+
+  &--danger {
+    background: rgba(#ef5350, 0.15);
+    color: #ef5350;
+    border: 1px solid rgba(#ef5350, 0.3);
+
+    &:hover {
+      background: rgba(#ef5350, 0.25);
+    }
+  }
+
+  &--sm {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  &--icon {
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+}
+
+// =============================================
+// FORMS
+// =============================================
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.form-label {
+  font-family: v.$font-body;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: v.$color-muted;
+}
+
+.form-control {
+  background: v.$color-surface2;
+  border: 1px solid v.$color-border;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: v.$font-body;
+  font-size: 14px;
+  color: v.$color-white;
+  transition: border-color v.$transition-fast;
+  width: 100%;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: v.$color-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: v.$color-primary;
+  }
+
+  &.error {
+    border-color: #ef5350;
+  }
+}
+
+.form-error {
+  font-family: v.$font-body;
+  font-size: 12px;
+  color: #ef5350;
+}
+
+// =============================================
+// MODAL
+// =============================================
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: v.$z-overlay;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  background: v.$color-surface;
+  border: 1px solid v.$color-border;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  animation: scaleIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &__header {
+    padding: 24px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__title {
+    font-family: v.$font-heading;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    color: v.$color-white;
+    text-transform: uppercase;
+  }
+
+  &__body {
+    padding: 20px 24px;
+  }
+
+  &__footer {
+    padding: 0 24px 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  &--wide {
+    max-width: 720px;
+  }
+}
+
+// =============================================
+// TOAST
+// =============================================
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: v.$z-lightbox;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast {
+  background: v.$color-surface;
+  border: 1px solid v.$color-border;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 400px;
+  pointer-events: auto;
+  animation: slideInRight 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  &__message {
+    font-family: v.$font-body;
+    font-size: 13px;
+    color: v.$color-white;
+    flex: 1;
+  }
+
+  &--success { border-left: 3px solid #4caf50; }
+  &--error   { border-left: 3px solid #ef5350; }
+  &--info    { border-left: 3px solid #42a5f5; }
+  &--warning { border-left: 3px solid #ff9800; }
+}
+
+// =============================================
+// SKELETON
+// =============================================
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    v.$color-surface2 25%,
+    v.$color-border 50%,
+    v.$color-surface2 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+
+  &--text {
+    height: 14px;
+    margin-bottom: 8px;
+    width: 100%;
+  }
+
+  &--title {
+    height: 24px;
+    width: 60%;
+    margin-bottom: 16px;
+  }
+
+  &--card {
+    height: 120px;
+    border-radius: 12px;
+  }
+
+  &--avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+  }
+}
+
+// =============================================
+// SEARCH INPUT
+// =============================================
+
+.search-input {
+  position: relative;
+
+  .icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: v.$color-muted;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+
+  input {
+    padding-left: 38px;
+    background: v.$color-surface2;
+    border: 1px solid v.$color-border;
+    border-radius: 8px;
+    padding-right: 14px;
+    height: 38px;
+    font-family: v.$font-body;
+    font-size: 13px;
+    color: v.$color-white;
+    width: 240px;
+    transition: border-color v.$transition-fast;
+
+    &::placeholder { color: v.$color-muted; }
+    &:focus {
+      outline: none;
+      border-color: v.$color-primary;
+    }
+  }
+}
+
+// =============================================
+// GRID LAYOUTS
+// =============================================
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.content-grid {
+  display: grid;
+  gap: 24px;
+}
+
+// =============================================
+// ALERTS
+// =============================================
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-family: v.$font-body;
+  font-size: 13px;
+
+  &--warning {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    color: #ffb74d;
+  }
+
+  &--error {
+    background: rgba(239, 83, 80, 0.1);
+    border: 1px solid rgba(239, 83, 80, 0.3);
+    color: #ef5350;
+  }
+
+  &--info {
+    background: rgba(66, 165, 245, 0.1);
+    border: 1px solid rgba(66, 165, 245, 0.3);
+    color: #42a5f5;
+  }
+
+  &--success {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    color: #4caf50;
+  }
+}
+
+// =============================================
+// SERVICE CARD
+// =============================================
+
+.service-card {
+  background: v.$color-surface;
+  border: 1px solid v.$color-border;
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: border-color v.$transition-fast;
+
+  &__name {
+    font-family: v.$font-body;
+    font-size: 13px;
+    font-weight: 600;
+    color: v.$color-white;
+  }
+
+  &__detail {
+    font-family: v.$font-body;
+    font-size: 11px;
+    color: v.$color-muted;
+    margin-top: 2px;
+  }
+
+  &:hover {
+    border-color: v.$color-muted;
+  }
+}
+
+// =============================================
+// SCROLLBAR
+// =============================================
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: v.$color-surface;
+}
+
+::-webkit-scrollbar-thumb {
+  background: v.$color-border;
+  border-radius: 3px;
+
+  &:hover {
+    background: v.$color-muted;
+  }
+}
+
+// =============================================
+// RESPONSIVE
+// =============================================
+
+@media (max-width: v.$bp-lg) {
+  .sidebar {
+    transform: translateX(-100%);
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+
+  .topbar {
+    left: 0;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+}
