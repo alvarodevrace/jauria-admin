@@ -164,8 +164,8 @@ type Vista = 'semana' | 'lista';
           <select
             class="form-control"
             style="width:auto;height:38px;"
-            [(ngModel)]="filterTipo"
-            (change)="cargarClases()"
+            [ngModel]="filterTipo()"
+            (ngModelChange)="onFilterTipoChange($event)"
           >
             <option value="">Todos los tipos</option>
             <option value="WOD">WOD</option>
@@ -191,7 +191,7 @@ type Vista = 'semana' | 'lista';
               </tr>
             </thead>
             <tbody>
-              @for (c of clases(); track c.id) {
+              @for (c of clasesFiltradas(); track c.id) {
                 <tr [class.row-cancelled]="c.cancelada">
                   <td>
                     <span
@@ -640,7 +640,7 @@ export class ClasesComponent implements OnInit {
   vista = signal<Vista>('semana');
   showFormClase = signal(false);
   claseSeleccionada = signal<Clase | null>(null);
-  filterTipo = '';
+  filterTipo = signal('');
 
   // Semana actual
   private semanaBase = signal(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -662,6 +662,12 @@ export class ClasesComponent implements OnInit {
     const lunes = this.semanaBase();
     const domingo = addDays(lunes, 6);
     return `${format(lunes, 'd MMM', { locale: es })} – ${format(domingo, 'd MMM yyyy', { locale: es })}`;
+  });
+
+  clasesFiltradas = computed(() => {
+    const tipo = this.filterTipo();
+    if (!tipo) return this.clases();
+    return this.clases().filter((clase) => clase.tipo === tipo);
   });
 
   newClase = this.emptyClase();
@@ -732,6 +738,10 @@ export class ClasesComponent implements OnInit {
     this.clases.set((data ?? []) as unknown as Clase[]);
   }
 
+  onFilterTipoChange(tipo: string) {
+    this.filterTipo.set(tipo);
+  }
+
   async cargarMisInscripciones() {
     const userId = this.auth.currentUser()?.id;
     if (!userId) return;
@@ -744,7 +754,7 @@ export class ClasesComponent implements OnInit {
   }
 
   clasesDelDia(fecha: string): Clase[] {
-    return this.clases().filter((c) => c.fecha === fecha);
+    return this.clasesFiltradas().filter((c) => c.fecha === fecha);
   }
 
   inscritoEn(claseId: number): boolean {

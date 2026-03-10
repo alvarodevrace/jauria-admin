@@ -164,19 +164,40 @@ export class RegistroComponent {
     // ── Paso 3: login automático para obtener el ID del nuevo usuario ──────────
     const { error: loginErr } = await this.auth.login(this.email.trim(), this.password);
 
-    if (!loginErr) {
-      // Vincular id_cliente al profile recién creado
-      const userId = this.auth.currentUser()?.id;
-      if (userId) {
-        await this.supabase.updateProfile(userId, {
-          id_cliente: cliente.id_cliente,
-          rol: 'atleta',
-          nombre_completo: this.nombre || cliente.nombre_completo,
-        });
-        // Hacer logout para que el atleta inicie sesión de forma limpia
-        await this.auth.logout();
-      }
+    if (loginErr) {
+      this.error.set(
+        'La cuenta se creó, pero no se pudo completar la vinculación con tu membresía. Contacta al coach antes de iniciar sesión.'
+      );
+      this.loading.set(false);
+      return;
     }
+
+    // Vincular id_cliente al profile recién creado
+    const userId = this.auth.currentUser()?.id;
+    if (!userId) {
+      this.error.set(
+        'La cuenta se creó, pero no se pudo identificar tu usuario para vincular la membresía. Contacta al coach.'
+      );
+      this.loading.set(false);
+      return;
+    }
+
+    const { error: profileErr } = await this.supabase.updateProfile(userId, {
+      id_cliente: cliente.id_cliente,
+      rol: 'atleta',
+      nombre_completo: this.nombre || cliente.nombre_completo,
+    });
+
+    if (profileErr) {
+      this.error.set(
+        'La cuenta se creó, pero no se pudo vincular tu membresía. Contacta al coach antes de iniciar sesión.'
+      );
+      this.loading.set(false);
+      return;
+    }
+
+    // Hacer logout para que el atleta inicie sesión de forma limpia
+    await this.auth.logout();
 
     this.loading.set(false);
     this.cuentaCreada.set(true);

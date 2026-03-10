@@ -106,7 +106,6 @@ export class SupabaseService {
     let query = this.client
       .from('clases')
       .select('*, profiles(nombre_completo)')
-      .eq('activa', true)
       .eq('cancelada', false)
       .order('fecha')
       .order('hora_inicio');
