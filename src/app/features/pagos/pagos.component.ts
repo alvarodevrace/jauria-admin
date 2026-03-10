@@ -31,7 +31,12 @@ interface Pago {
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Historial de Pagos</span>
-        <select class="form-control" style="width:auto;height:38px;" [(ngModel)]="filterMetodo" (change)="applyFilter()">
+        <select
+          class="form-control"
+          style="width:auto;height:38px;"
+          [(ngModel)]="filterMetodo"
+          (change)="applyFilter()"
+        >
           <option value="">Todos los métodos</option>
           <option value="TRANSFERENCIA">Transferencia</option>
           <option value="PAYPHONE">Payphone</option>
@@ -39,7 +44,9 @@ interface Pago {
       </div>
 
       @if (loading()) {
-        <div style="padding:40px;text-align:center;color:#666;">Cargando...</div>
+        <div style="padding:40px;text-align:center;color:#666;">
+          Cargando...
+        </div>
       } @else {
         <table class="data-table">
           <thead>
@@ -58,23 +65,42 @@ interface Pago {
               <tr>
                 <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
                 <td>
-                  <div style="font-weight:600;color:#fff;">{{ p.nombre_cliente }}</div>
-                  <div style="font-size:12px;color:#666;">{{ p.id_cliente }}</div>
+                  <div style="font-weight:600;color:#fff;">
+                    {{ p.nombre_cliente }}
+                  </div>
+                  <div style="font-size:12px;color:#666;">
+                    {{ p.id_cliente }}
+                  </div>
                 </td>
                 <td style="font-weight:600;color:#4caf50;">$ {{ p.monto }}</td>
                 <td>
-                  <span class="badge badge--{{ p.metodo === 'TRANSFERENCIA' ? 'mensual' : 'trimestral' }}">
+                  <span
+                    class="badge badge--{{
+                      p.metodo === 'TRANSFERENCIA' ? 'mensual' : 'trimestral'
+                    }}"
+                  >
                     {{ p.metodo }}
                   </span>
                 </td>
                 <td style="font-size:13px;">{{ p.banco || '—' }}</td>
-                <td style="font-size:12px;color:#666;font-family:monospace;">{{ p.referencia_transaccion || '—' }}</td>
+                <td style="font-size:12px;color:#666;font-family:monospace;">
+                  {{ p.referencia_transaccion || '—' }}
+                </td>
                 <td>
-                  <span class="badge badge--{{ p.estado?.toLowerCase() }}">{{ p.estado }}</span>
+                  <span class="badge badge--{{ p.estado?.toLowerCase() }}">{{
+                    p.estado
+                  }}</span>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="7" style="text-align:center;padding:40px;color:#666;">No hay pagos registrados</td></tr>
+              <tr>
+                <td
+                  colspan="7"
+                  style="text-align:center;padding:40px;color:#666;"
+                >
+                  No hay pagos registrados
+                </td>
+              </tr>
             }
           </tbody>
         </table>
@@ -94,14 +120,18 @@ export class PagosComponent implements OnInit {
   async ngOnInit() {
     const { data, error } = await this.supabase.getHistorialPagos();
     this.loading.set(false);
-    if (error) { this.toast.error(error.message); return; }
+    if (error) {
+      this.toast.error(error.message);
+      return;
+    }
     this.pagos.set((data ?? []) as Pago[]);
     this.filtered.set((data ?? []) as Pago[]);
   }
 
   applyFilter() {
     let result = this.pagos();
-    if (this.filterMetodo) result = result.filter((p) => p.metodo === this.filterMetodo);
+    if (this.filterMetodo)
+      result = result.filter((p) => p.metodo === this.filterMetodo);
     this.filtered.set(result);
   }
 }
