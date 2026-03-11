@@ -6,7 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
-import { TablerIconsModule } from 'angular-tabler-icons';
+import { LucideAngularModule } from 'lucide-angular';
 import {
   format,
   startOfWeek,
@@ -46,7 +46,7 @@ type Vista = 'semana' | 'lista';
 @Component({
   selector: 'app-clases',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconsModule],
+  imports: [CommonModule, FormsModule, DateEcPipe, LucideAngularModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Calendario</span>
@@ -237,7 +237,7 @@ type Vista = 'semana' | 'lista';
                         (click)="verClase(c)"
                         title="Ver inscritos"
                       >
-                        <i-tabler name="users" />
+                        <i-lucide name="users" />
                       </button>
                       @if (auth.isCoach()) {
                         <button
@@ -277,7 +277,7 @@ type Vista = 'semana' | 'lista';
               class="btn btn--ghost btn--icon"
               (click)="showFormClase.set(false)"
             >
-              <i-tabler name="circle-x" />
+              <i-lucide name="circle-x" />
             </button>
           </div>
           <div class="modal__body">
@@ -391,14 +391,14 @@ type Vista = 'semana' | 'lista';
               class="btn btn--ghost btn--icon"
               (click)="claseSeleccionada.set(null)"
             >
-              <i-tabler name="circle-x" />
+              <i-lucide name="circle-x" />
             </button>
           </div>
           <div class="modal__body">
             @if (claseSeleccionada()!.descripcion) {
               <div class="alert alert--info" style="margin-bottom:16px;">
                 <div style="display:flex;align-items:flex-start;gap:10px;">
-                  <i-tabler name="clipboard" />
+                  <i-lucide name="clipboard" />
                   <span>{{ claseSeleccionada()!.descripcion }}</span>
                 </div>
               </div>

@@ -1,13 +1,13 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TablerIconsModule } from 'angular-tabler-icons';
+import { LucideAngularModule } from 'lucide-angular';
 import { SupabaseService } from '../../../core/services/supabase.service';
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [FormsModule, TablerIconsModule],
+  imports: [FormsModule, LucideAngularModule],
   template: `
     <div class="auth-page">
       <div class="auth-card">
@@ -64,7 +64,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           </form>
         } @else if (tokenInvalido()) {
           <div class="alert alert--error" style="text-align:center;padding:24px;">
-            <div class="auth-state-icon auth-state-icon--warning"><i-tabler name="alert-triangle" /></div>
+            <div class="auth-state-icon auth-state-icon--warning"><i-lucide name="alert-triangle" /></div>
             <strong>Enlace inválido o expirado</strong>
             <p style="margin-top:8px;font-size:13px;color:#d2cbc1;">
               El enlace de recuperación expiró o ya fue usado. Solicita uno nuevo.

@@ -1,32 +1,32 @@
-import { ApplicationConfig, ErrorHandler } from '@angular/core';
+import { ApplicationConfig, ErrorHandler, importProvidersFrom } from '@angular/core';
 import { provideRouter, withViewTransitions, withRouterConfig } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import * as Sentry from '@sentry/angular';
-import { TablerIconsProvider } from 'angular-tabler-icons';
+import { LucideAngularModule } from 'lucide-angular';
 import {
-  IconAlertTriangle,
-  IconBarbell,
-  IconBolt,
-  IconChartBar,
-  IconCheck,
-  IconCircleCheck,
-  IconCircleX,
-  IconClipboard,
-  IconCreditCard,
-  IconInfoCircle,
-  IconKey,
-  IconLink,
-  IconLogout2,
-  IconMail,
-  IconMessage,
-  IconPencil,
-  IconSend,
-  IconSettings2,
-  IconUser,
-  IconUsers,
-  IconWallet,
-} from 'angular-tabler-icons/icons';
+  BadgeInfo,
+  ChartBar,
+  Check,
+  CircleCheck,
+  CircleX,
+  Clipboard,
+  CreditCard,
+  Dumbbell,
+  Key,
+  Link,
+  LogOut,
+  Mail,
+  MessageSquare,
+  Pencil,
+  Send,
+  Settings,
+  TriangleAlert,
+  User,
+  Users,
+  Wallet,
+  Zap,
+} from 'lucide-angular';
 import { routes } from './app.routes';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
@@ -36,29 +36,31 @@ const providers: ApplicationConfig['providers'] = [
   provideRouter(routes, withViewTransitions(), withRouterConfig({ onSameUrlNavigation: 'reload' })),
   provideHttpClient(withInterceptors([jwtInterceptor, httpErrorInterceptor])),
   provideAnimations(),
-  TablerIconsProvider.pick({
-    IconAlertTriangle,
-    IconBarbell,
-    IconBolt,
-    IconChartBar,
-    IconCheck,
-    IconCircleCheck,
-    IconCircleX,
-    IconClipboard,
-    IconCreditCard,
-    IconInfoCircle,
-    IconKey,
-    IconLink,
-    IconLogout2,
-    IconMail,
-    IconMessage,
-    IconPencil,
-    IconSend,
-    IconSettings2,
-    IconUser,
-    IconUsers,
-    IconWallet,
-  }),
+  importProvidersFrom(
+    LucideAngularModule.pick({
+      AlertTriangle: TriangleAlert,
+      Barbell: Dumbbell,
+      Bolt: Zap,
+      ChartBar,
+      Check,
+      CircleCheck,
+      CircleX,
+      Clipboard,
+      CreditCard,
+      InfoCircle: BadgeInfo,
+      Key,
+      Link,
+      Logout2: LogOut,
+      Mail,
+      Message: MessageSquare,
+      Pencil,
+      Send,
+      Settings2: Settings,
+      User,
+      Users,
+      Wallet,
+    }),
+  ),
 ];
 
 // Sentry error handler solo si hay DSN configurado

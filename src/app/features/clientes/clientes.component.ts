@@ -6,7 +6,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { PlanLabelPipe } from '../../shared/pipes/plan-label.pipe';
 import { environment } from '../../../environments/environment';
-import { TablerIconsModule } from 'angular-tabler-icons';
+import { LucideAngularModule } from 'lucide-angular';
 
 interface Cliente {
   id_cliente: string;
@@ -37,7 +37,7 @@ type ModalMode = 'crear' | 'editar' | null;
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, PlanLabelPipe, TablerIconsModule],
+  imports: [CommonModule, FormsModule, DateEcPipe, PlanLabelPipe, LucideAngularModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Gestión</span>
@@ -111,14 +111,14 @@ type ModalMode = 'crear' | 'editar' | null;
                 <td style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
                 <td>
                   <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="abrirModal('editar', c)"><i-tabler name="pencil" /></button>
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-tabler name="clipboard" /></button>
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-lucide name="clipboard" /></button>
                     <button class="btn btn--ghost btn--sm" title="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)" [disabled]="loadingAccion() === c.id_cliente + '_rec'">
-                      @if (loadingAccion() === c.id_cliente + '_rec') { ... } @else { <i-tabler name="send" /> }
+                      @if (loadingAccion() === c.id_cliente + '_rec') { ... } @else { <i-lucide name="send" /> }
                     </button>
                     @if (c.metodo_pago === 'PAYPHONE' || c.plan !== 'MENSUAL') {
                       <button class="btn btn--ghost btn--sm" title="Generar link Payphone" (click)="generarLinkPayphone(c)" [disabled]="loadingAccion() === c.id_cliente + '_pay'">
-                        @if (loadingAccion() === c.id_cliente + '_pay') { ... } @else { <i-tabler name="link" /> }
+                        @if (loadingAccion() === c.id_cliente + '_pay') { ... } @else { <i-lucide name="link" /> }
                       </button>
                     }
                   </div>
@@ -142,7 +142,7 @@ type ModalMode = 'crear' | 'editar' | null;
         <div class="modal modal--wide" (click)="$event.stopPropagation()">
           <div class="modal__header">
             <h3 class="modal__title">{{ modalMode() === 'crear' ? 'Nuevo Cliente' : 'Editar Cliente' }}</h3>
-            <button class="btn btn--ghost btn--icon" (click)="cerrarModal()"><i-tabler name="circle-x" /></button>
+            <button class="btn btn--ghost btn--icon" (click)="cerrarModal()"><i-lucide name="circle-x" /></button>
           </div>
           <div class="modal__body">
             <form (ngSubmit)="guardarCliente()">
@@ -236,7 +236,7 @@ type ModalMode = 'crear' | 'editar' | null;
         <div class="modal modal--wide" (click)="$event.stopPropagation()">
           <div class="modal__header">
             <h3 class="modal__title">Historial de Pagos</h3>
-            <button class="btn btn--ghost btn--icon" (click)="historialClienteId.set('')"><i-tabler name="circle-x" /></button>
+            <button class="btn btn--ghost btn--icon" (click)="historialClienteId.set('')"><i-lucide name="circle-x" /></button>
           </div>
           <div class="modal__body">
             @if (historialLoading()) {

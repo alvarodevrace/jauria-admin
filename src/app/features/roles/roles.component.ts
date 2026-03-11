@@ -6,7 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
-import { TablerIconsModule } from 'angular-tabler-icons';
+import { LucideAngularModule } from 'lucide-angular';
 
 interface Profile {
   id: string;
@@ -20,7 +20,7 @@ interface Profile {
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconsModule],
+  imports: [CommonModule, FormsModule, DateEcPipe, LucideAngularModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Sistema</span>
@@ -68,7 +68,7 @@ interface Profile {
                 <td style="font-size:12px;color:#938c84;">{{ p.created_at | dateEc }}</td>
                 <td>
                   <span style="display:inline-flex;align-items:center;gap:8px;" [style.color]="p.activo ? '#3D8B6D' : '#938C84'">
-                    <i-tabler [name]="p.activo ? 'circle-check' : 'circle-x'"></i-tabler>
+                    <i-lucide [name]="p.activo ? 'circle-check' : 'circle-x'"></i-lucide>
                     {{ p.activo ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>

@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TablerIconsModule } from 'angular-tabler-icons';
+import { LucideAngularModule } from 'lucide-angular';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -19,7 +19,7 @@ interface Lead {
 @Component({
   selector: 'app-leads',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconsModule],
+  imports: [CommonModule, FormsModule, DateEcPipe, LucideAngularModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Landing Page</span>
@@ -106,7 +106,7 @@ interface Lead {
         <div class="modal modal--wide" (click)="$event.stopPropagation()">
           <div class="modal__header">
             <h3 class="modal__title">Detalle del lead</h3>
-            <button class="btn btn--ghost btn--icon" (click)="selectedLead.set(null)"><i-tabler name="circle-x" /></button>
+            <button class="btn btn--ghost btn--icon" (click)="selectedLead.set(null)"><i-lucide name="circle-x" /></button>
           </div>
           <div class="modal__body">
             <div class="two-column-grid">
