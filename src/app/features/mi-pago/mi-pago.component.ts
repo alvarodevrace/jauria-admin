@@ -43,45 +43,45 @@ interface Pago {
         No se encontró un plan asociado a tu cuenta. Contacta al coach para más información.
       </div>
     } @else {
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:800px;" class="pago-grid">
+      <div class="pago-grid">
 
         <!-- Estado actual -->
         <div class="data-table-wrapper">
           <div class="data-table-wrapper__header">
             <span class="data-table-wrapper__title">Estado Actual</span>
           </div>
-          <div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+          <div class="pago-summary-grid">
 
-            <div class="stat-card">
+            <div class="stat-card pago-summary-card">
               <div class="stat-card__label">Estado de Membresía</div>
-              <div style="margin-top:8px;">
+              <div class="pago-summary-card__content">
                 <span class="badge badge--{{ cliente()!.estado.toLowerCase() }}" style="font-size:14px;padding:8px 16px;">
                   {{ cliente()!.estado }}
                 </span>
               </div>
             </div>
 
-            <div class="stat-card">
+            <div class="stat-card pago-summary-card">
               <div class="stat-card__label">Plan</div>
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:#f4f1eb;margin-top:6px;">
+              <div class="pago-summary-card__headline">
                 {{ cliente()!.plan | planLabel : cliente()!.monto_plan }}
               </div>
-              <div style="font-size:12px;color:#938C84;margin-top:4px;">Método: {{ cliente()!.metodo_pago }}</div>
+              <div class="pago-summary-card__meta">Método: {{ cliente()!.metodo_pago }}</div>
             </div>
 
-            <div class="stat-card">
+            <div class="stat-card pago-summary-card">
               <div class="stat-card__label">Vencimiento</div>
-              <div style="font-size:20px;color:#f4f1eb;margin-top:6px;" [style.color]="diasColor()">
+              <div class="pago-summary-card__headline pago-summary-card__headline--compact" [style.color]="diasColor()">
                 {{ cliente()!.fecha_vencimiento | dateEc }}
               </div>
-              <div style="font-size:13px;margin-top:4px;" [style.color]="diasColor()">
+              <div class="pago-summary-card__meta" [style.color]="diasColor()">
                 {{ diasRestantesLabel() }}
               </div>
             </div>
 
-            <div class="stat-card">
+            <div class="stat-card pago-summary-card">
               <div class="stat-card__label">Último Pago</div>
-              <div style="font-size:16px;color:#f4f1eb;margin-top:6px;">
+              <div class="pago-summary-card__headline pago-summary-card__headline--compact">
                 {{ cliente()!.ultimo_pago_fecha | dateEc }}
               </div>
             </div>
@@ -164,7 +164,65 @@ interface Pago {
     }
   `,
   styles: [`
-    @media (max-width: 768px) { .pago-grid { grid-template-columns: 1fr !important; } }
+    .pago-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      max-width: 960px;
+      align-items: start;
+    }
+
+    .pago-summary-grid {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .pago-summary-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 148px;
+    }
+
+    .pago-summary-card__content {
+      display: flex;
+      align-items: center;
+      min-height: 56px;
+    }
+
+    .pago-summary-card__headline {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      color: #f4f1eb;
+      margin-top: 6px;
+      line-height: 1.1;
+    }
+
+    .pago-summary-card__headline--compact {
+      font-family: 'Manrope', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .pago-summary-card__meta {
+      font-size: 13px;
+      color: #938C84;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 768px) {
+      .pago-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      .pago-summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   `],
 })
 export class MiPagoComponent implements OnInit {
