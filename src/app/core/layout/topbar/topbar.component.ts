@@ -1,4 +1,4 @@
-import { Component, inject, Output, EventEmitter, computed } from '@angular/core';
+import { Component, inject, Output, EventEmitter, computed, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
@@ -53,11 +53,11 @@ const ROUTE_TITLES: Record<string, string> = {
         display: block;
         width: 20px;
         height: 2px;
-        background: #ccc;
+        background: #938c84;
         border-radius: 2px;
         transition: 0.2s ease;
       }
-      &:hover span { background: #fff; }
+      &:hover span { background: #f4f1eb; }
     }
     @media (max-width: 1024px) {
       .topbar__hamburger { display: flex; }
@@ -68,16 +68,20 @@ export class TopbarComponent {
   @Output() menuClick = new EventEmitter<void>();
   auth = inject(AuthService);
   private router = inject(Router);
+  private currentUrl = signal(this.getCurrentUrl());
 
   pageTitle = computed(() => {
-    const url = this.router.url.split('?')[0];
-    return ROUTE_TITLES[url] ?? 'Panel Admin';
+    return ROUTE_TITLES[this.currentUrl()] ?? 'Panel Admin';
   });
 
   constructor() {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      // trigger computed re-evaluation
+      this.currentUrl.set(this.getCurrentUrl());
     });
+  }
+
+  private getCurrentUrl(): string {
+    return this.router.url.split('?')[0];
   }
 
   initials() {
