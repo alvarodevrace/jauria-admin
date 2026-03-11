@@ -140,22 +140,22 @@ interface Pago {
               <span class="data-table-wrapper__title">Historial</span>
             </div>
             @if (pagos().length === 0) {
-              <div style="padding:24px;text-align:center;color:#938C84;">Sin pagos registrados.</div>
+              <div class="pago-history-empty">Sin pagos registrados.</div>
             } @else {
-              <table class="data-table">
-                <thead>
-                  <tr><th>Fecha</th><th>Monto</th><th>Estado</th></tr>
-                </thead>
-                <tbody>
-                  @for (p of pagos(); track p.id) {
-                    <tr>
-                      <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
-                      <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
-                      <td><span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span></td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+              <div class="pago-history-list">
+                @for (p of pagos(); track p.id) {
+                  <article class="pago-history-item">
+                    <div class="pago-history-item__main">
+                      <div class="pago-history-item__label">Fecha de pago</div>
+                      <div class="pago-history-item__value">{{ p.fecha_pago | dateEc }}</div>
+                    </div>
+                    <div class="pago-history-item__aside">
+                      <div class="pago-history-item__amount">$ {{ p.monto }}</div>
+                      <span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span>
+                    </div>
+                  </article>
+                }
+              </div>
             }
           </div>
         </div>
@@ -214,6 +214,64 @@ interface Pago {
       line-height: 1.4;
     }
 
+    .pago-history-empty {
+      padding: 24px;
+      text-align: center;
+      color: #938C84;
+    }
+
+    .pago-history-list {
+      padding: 20px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pago-history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      background: #141414;
+    }
+
+    .pago-history-item__main,
+    .pago-history-item__aside {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .pago-history-item__aside {
+      align-items: flex-end;
+    }
+
+    .pago-history-item__label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #938C84;
+    }
+
+    .pago-history-item__value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f4f1eb;
+      line-height: 1.3;
+    }
+
+    .pago-history-item__amount {
+      font-size: 18px;
+      font-weight: 700;
+      color: #3D8B6D;
+      line-height: 1;
+    }
+
     @media (max-width: 768px) {
       .pago-grid {
         grid-template-columns: 1fr !important;
@@ -221,6 +279,16 @@ interface Pago {
 
       .pago-summary-grid {
         grid-template-columns: 1fr;
+      }
+
+      .pago-history-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .pago-history-item__aside {
+        width: 100%;
+        align-items: flex-start;
       }
     }
   `],
