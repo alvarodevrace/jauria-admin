@@ -8,7 +8,7 @@ import { ToastService } from '../../core/services/toast.service';
 
 Chart.register(...registerables);
 
-interface KPI { label: string; value: string | number; trend?: string; trendUp?: boolean; icon?: string; }
+interface KPI { label: string; value: string | number; trend?: string; trendUp?: boolean; }
 interface Alerta { tipo: string; titulo: string; msg: string; }
 type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
 
@@ -115,8 +115,8 @@ type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
         </div>
         <div style="padding:16px;">
           @if (alertas().length === 0) {
-            <div style="text-align:center;padding:24px;color:#4caf50;">
-              ✓ Sin alertas activas
+            <div style="text-align:center;padding:24px;color:#938C84;">
+              Sin alertas activas
             </div>
           } @else {
             @for (a of alertas(); track a.titulo) {
@@ -184,11 +184,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     const totalCobrado = pd.reduce((s, p) => s + Number(p['monto'] ?? 0), 0);
 
     this.kpis.set([
-      { label: 'Clientes Activos',  value: activos,              trend: `${total} total`,         trendUp: true,          icon: '👥' },
-      { label: 'Total Cobrado',     value: `$${totalCobrado.toFixed(0)}`, trend: `${pd.length} pagos`,  trendUp: true,  icon: '💰' },
-      { label: 'Tasa de Pago',      value: `${tasaPago}%`,       trend: tasaPago >= 70 ? 'Saludable' : 'Revisar',  trendUp: tasaPago >= 70, icon: '📈' },
-      { label: 'Conv. Activas WA',  value: cvd.length,           icon: '💬' },
-      { label: 'Leads Landing',     value: ld.length,            icon: '📋' },
+      { label: 'Clientes Activos',  value: activos,              trend: `${total} total`,         trendUp: true },
+      { label: 'Total Cobrado',     value: `$${totalCobrado.toFixed(0)}`, trend: `${pd.length} pagos`,  trendUp: true },
+      { label: 'Tasa de Pago',      value: `${tasaPago}%`,       trend: tasaPago >= 70 ? 'Saludable' : 'Revisar',  trendUp: tasaPago >= 70 },
+      { label: 'Conv. Activas WA',  value: cvd.length },
+      { label: 'Leads Landing',     value: ld.length },
     ]);
 
     // Alertas

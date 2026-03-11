@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
+import { TablerIconComponent } from 'angular-tabler-icons';
 import {
   format,
   startOfWeek,
@@ -45,7 +46,7 @@ type Vista = 'semana' | 'lista';
 @Component({
   selector: 'app-clases',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe],
+  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconComponent],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Calendario</span>
@@ -229,14 +230,14 @@ type Vista = 'semana' | 'lista';
                             : ''
                         "
                       >
-                        {{ inscritoEn(c.id) ? '✕ Cancelar' : '✓ Inscribirse' }}
+                        {{ inscritoEn(c.id) ? 'Cancelar' : 'Inscribirse' }}
                       </button>
                       <button
-                        class="btn btn--ghost btn--sm"
+                        class="btn btn--ghost btn--sm btn--icon"
                         (click)="verClase(c)"
                         title="Ver inscritos"
                       >
-                        👥
+                        <i-tabler name="users" />
                       </button>
                       @if (auth.isCoach()) {
                         <button
@@ -276,7 +277,7 @@ type Vista = 'semana' | 'lista';
               class="btn btn--ghost btn--icon"
               (click)="showFormClase.set(false)"
             >
-              ✕
+              <i-tabler name="circle-x" />
             </button>
           </div>
           <div class="modal__body">
@@ -390,13 +391,16 @@ type Vista = 'semana' | 'lista';
               class="btn btn--ghost btn--icon"
               (click)="claseSeleccionada.set(null)"
             >
-              ✕
+              <i-tabler name="circle-x" />
             </button>
           </div>
           <div class="modal__body">
             @if (claseSeleccionada()!.descripcion) {
               <div class="alert alert--info" style="margin-bottom:16px;">
-                📋 {{ claseSeleccionada()!.descripcion }}
+                <div style="display:flex;align-items:flex-start;gap:10px;">
+                  <i-tabler name="clipboard" />
+                  <span>{{ claseSeleccionada()!.descripcion }}</span>
+                </div>
               </div>
             }
 
@@ -424,8 +428,8 @@ type Vista = 'semana' | 'lista';
               >
                 {{
                   inscritoEn(claseSeleccionada()!.id)
-                    ? '✕ Cancelar inscripción'
-                    : '✓ Inscribirse'
+                    ? 'Cancelar inscripción'
+                    : 'Inscribirse'
                 }}
               </button>
             </div>
@@ -472,7 +476,7 @@ type Vista = 'semana' | 'lista';
                               [disabled]="ins.estado === 'asistio'"
                               title="Asistió"
                             >
-                              ✓ Asistió
+                              Asistió
                             </button>
                             <button
                               class="btn btn--sm btn--danger"
@@ -480,7 +484,7 @@ type Vista = 'semana' | 'lista';
                               [disabled]="ins.estado === 'no_asistio'"
                               title="No asistió"
                             >
-                              ✕ No asistió
+                              No asistió
                             </button>
                           </div>
                         </td>

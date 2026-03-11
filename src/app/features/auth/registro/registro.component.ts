@@ -1,13 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TablerIconComponent } from 'angular-tabler-icons';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 
 @Component({
   selector: 'app-registro',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TablerIconComponent],
   template: `
     <div class="auth-page">
       <div class="auth-card">
@@ -50,7 +51,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           </form>
         } @else {
           <div class="alert alert--success" style="text-align:center;padding:24px;">
-            <div style="font-size:32px;margin-bottom:12px;">✅</div>
+            <div class="auth-state-icon auth-state-icon--success"><i-tabler name="circle-check" /></div>
             <strong>¡Cuenta creada!</strong>
             <p style="margin-top:8px;font-size:13px;color:#d2cbc1;">
               Ahora puedes iniciar sesión y ver tus clases y membresía.

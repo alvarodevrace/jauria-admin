@@ -576,6 +576,11 @@ $topbar-height: 64px;
     cursor: not-allowed;
     transform: none !important;
   }
+
+  i-tabler {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 // =============================================
@@ -725,6 +730,18 @@ $topbar-height: 64px;
     flex: 1;
   }
 
+  &__icon,
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    i-tabler {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
   &--success {
     border-left: 3px solid v.$color-success;
   }
@@ -834,6 +851,36 @@ $topbar-height: 64px;
 .content-grid {
   display: grid;
   gap: 24px;
+}
+
+.auth-state-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(v.$color-border-strong, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: v.$color-white;
+  background: rgba(v.$color-surface2, 0.9);
+
+  i-tabler {
+    width: 22px;
+    height: 22px;
+  }
+
+  &--success {
+    color: v.$color-success;
+    border-color: rgba(v.$color-success, 0.3);
+    background: rgba(v.$color-success, 0.08);
+  }
+
+  &--warning {
+    color: v.$color-warning;
+    border-color: rgba(v.$color-warning, 0.28);
+    background: rgba(v.$color-warning, 0.08);
+  }
 }
 
 .toolbar-row {

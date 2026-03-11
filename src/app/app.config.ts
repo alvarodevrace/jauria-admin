@@ -3,6 +3,30 @@ import { provideRouter, withViewTransitions, withRouterConfig } from '@angular/r
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import * as Sentry from '@sentry/angular';
+import { provideTablerIcons } from 'angular-tabler-icons';
+import {
+  IconAlertTriangle,
+  IconBarbell,
+  IconBolt,
+  IconChartBar,
+  IconCheck,
+  IconCircleCheck,
+  IconCircleX,
+  IconClipboard,
+  IconCreditCard,
+  IconInfoCircle,
+  IconKey,
+  IconLink,
+  IconLogout2,
+  IconMail,
+  IconMessage,
+  IconPencil,
+  IconSend,
+  IconSettings2,
+  IconUser,
+  IconUsers,
+  IconWallet,
+} from 'angular-tabler-icons/icons';
 import { routes } from './app.routes';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
@@ -12,6 +36,29 @@ const providers: ApplicationConfig['providers'] = [
   provideRouter(routes, withViewTransitions(), withRouterConfig({ onSameUrlNavigation: 'reload' })),
   provideHttpClient(withInterceptors([jwtInterceptor, httpErrorInterceptor])),
   provideAnimations(),
+  provideTablerIcons({
+    IconAlertTriangle,
+    IconBarbell,
+    IconBolt,
+    IconChartBar,
+    IconCheck,
+    IconCircleCheck,
+    IconCircleX,
+    IconClipboard,
+    IconCreditCard,
+    IconInfoCircle,
+    IconKey,
+    IconLink,
+    IconLogout2,
+    IconMail,
+    IconMessage,
+    IconPencil,
+    IconSend,
+    IconSettings2,
+    IconUser,
+    IconUsers,
+    IconWallet,
+  }),
 ];
 
 // Sentry error handler solo si hay DSN configurado

@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
+import { TablerIconComponent } from 'angular-tabler-icons';
 
 interface Profile {
   id: string;
@@ -19,7 +20,7 @@ interface Profile {
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe],
+  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconComponent],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Sistema</span>
@@ -36,7 +37,7 @@ interface Profile {
       </div>
 
       @if (loading()) {
-        <div style="padding:40px;text-align:center;color:#666;">Cargando...</div>
+        <div style="padding:40px;text-align:center;color:#938c84;">Cargando...</div>
       } @else {
         <table class="data-table">
           <thead>
@@ -54,20 +55,21 @@ interface Profile {
               <tr>
                 <td>
                   <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:32px;height:32px;background:#B71C1C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#fff;flex-shrink:0;">
+                    <div style="width:32px;height:32px;background:#A61F24;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#f4f1eb;flex-shrink:0;">
                       {{ p.nombre_completo[0] }}
                     </div>
-                    <span style="font-weight:600;color:#fff;">{{ p.nombre_completo }}</span>
+                    <span style="font-weight:600;color:#f4f1eb;">{{ p.nombre_completo }}</span>
                   </div>
                 </td>
-                <td style="font-size:13px;color:#aaa;">{{ p.email }}</td>
+                <td style="font-size:13px;color:#d2cbc1;">{{ p.email }}</td>
                 <td>
                   <span class="badge badge--{{ rolBadge(p.rol) }}">{{ p.rol }}</span>
                 </td>
-                <td style="font-size:12px;color:#666;">{{ p.created_at | dateEc }}</td>
+                <td style="font-size:12px;color:#938c84;">{{ p.created_at | dateEc }}</td>
                 <td>
-                  <span [style.color]="p.activo ? '#4caf50' : '#666'">
-                    {{ p.activo ? '✓ Activo' : '✕ Inactivo' }}
+                  <span style="display:inline-flex;align-items:center;gap:8px;" [style.color]="p.activo ? '#3D8B6D' : '#938C84'">
+                    <i-tabler [name]="p.activo ? 'circle-check' : 'circle-x'"></i-tabler>
+                    {{ p.activo ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
                 <td>
@@ -85,16 +87,16 @@ interface Profile {
                         <option value="admin">admin</option>
                       </select>
                       @if (changing() === p.id) {
-                        <span style="font-size:12px;color:#666;">guardando...</span>
+                        <span style="font-size:12px;color:#938c84;">guardando...</span>
                       }
                     </div>
                   } @else {
-                    <span style="font-size:12px;color:#555;font-style:italic;">tú</span>
+                    <span style="font-size:12px;color:#938c84;font-style:italic;">tú</span>
                   }
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">Sin personas registradas.</td></tr>
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:#938c84;">Sin personas registradas.</td></tr>
             }
           </tbody>
         </table>

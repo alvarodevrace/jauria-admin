@@ -3,12 +3,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
+import { TablerIconComponent } from 'angular-tabler-icons';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterLink, RouterLinkActive, CommonModule, TablerIconComponent],
   template: `
     <!-- Mobile overlay -->
     @if (mobileOpen()) {
@@ -30,18 +31,18 @@ import { AuthService } from '../../auth/auth.service';
         <span class="sidebar__section-label">General</span>
 
         <a class="sidebar__item" routerLink="/app/clases" routerLinkActive="active" (click)="close()">
-          <span class="sidebar__item-icon">🏋️</span>
+          <i-tabler class="sidebar__item-icon" name="barbell" />
           <span>Clases</span>
         </a>
 
         <a class="sidebar__item" routerLink="/app/mi-cuenta" routerLinkActive="active" (click)="close()">
-          <span class="sidebar__item-icon">👤</span>
+          <i-tabler class="sidebar__item-icon" name="user" />
           <span>Mi Cuenta</span>
         </a>
 
         @if (auth.rol() === 'atleta') {
           <a class="sidebar__item" routerLink="/app/mi-pago" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">💳</span>
+            <i-tabler class="sidebar__item-icon" name="credit-card" />
             <span>Mi Pago</span>
           </a>
         }
@@ -51,22 +52,22 @@ import { AuthService } from '../../auth/auth.service';
           <span class="sidebar__section-label">Gestión</span>
 
           <a class="sidebar__item" routerLink="/app/clientes" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">👥</span>
+            <i-tabler class="sidebar__item-icon" name="users" />
             <span>Clientes</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/pagos" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">💰</span>
+            <i-tabler class="sidebar__item-icon" name="wallet" />
             <span>Pagos</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">💬</span>
+            <i-tabler class="sidebar__item-icon" name="message" />
             <span>Conversaciones WA</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">⚙️</span>
+            <i-tabler class="sidebar__item-icon" name="settings-2" />
             <span>Configuración</span>
           </a>
         }
@@ -76,22 +77,22 @@ import { AuthService } from '../../auth/auth.service';
           <span class="sidebar__section-label">Sistema</span>
 
           <a class="sidebar__item" routerLink="/app/dashboard" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">📊</span>
+            <i-tabler class="sidebar__item-icon" name="chart-bar" />
             <span>Dashboard</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">📋</span>
+            <i-tabler class="sidebar__item-icon" name="clipboard" />
             <span>Leads</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/workflows" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">⚡</span>
+            <i-tabler class="sidebar__item-icon" name="bolt" />
             <span>Workflows n8n</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">🔑</span>
+            <i-tabler class="sidebar__item-icon" name="key" />
             <span>Gestión de Roles</span>
           </a>
         }
@@ -106,7 +107,7 @@ import { AuthService } from '../../auth/auth.service';
           </div>
         </div>
         <button class="sidebar__logout" (click)="auth.logout()" title="Cerrar sesión">
-          ↩
+          <i-tabler name="logout-2" />
         </button>
       </div>
     </aside>
@@ -155,9 +156,10 @@ import { AuthService } from '../../auth/auth.service';
       margin-top: 2px;
     }
     .sidebar__item-icon {
-      font-size: 16px;
       width: 20px;
+      height: 20px;
       flex-shrink: 0;
+      color: currentColor;
     }
     .sidebar__user-mini {
       display: flex;
@@ -212,7 +214,6 @@ import { AuthService } from '../../auth/auth.service';
       height: 30px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
       flex-shrink: 0;
       display: flex;
       align-items: center;

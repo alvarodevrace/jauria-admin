@@ -37,7 +37,7 @@ interface Pago {
     </div>
 
     @if (loading()) {
-      <div style="text-align:center;padding:60px;color:#666;">Cargando...</div>
+      <div style="text-align:center;padding:60px;color:#938C84;">Cargando...</div>
     } @else if (!cliente()) {
       <div class="alert alert--info">
         No se encontró un plan asociado a tu cuenta. Contacta al coach para más información.
@@ -63,15 +63,15 @@ interface Pago {
 
             <div class="stat-card">
               <div class="stat-card__label">Plan</div>
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;margin-top:6px;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:#f4f1eb;margin-top:6px;">
                 {{ cliente()!.plan | planLabel : cliente()!.monto_plan }}
               </div>
-              <div style="font-size:12px;color:#666;margin-top:4px;">Método: {{ cliente()!.metodo_pago }}</div>
+              <div style="font-size:12px;color:#938C84;margin-top:4px;">Método: {{ cliente()!.metodo_pago }}</div>
             </div>
 
             <div class="stat-card">
               <div class="stat-card__label">Vencimiento</div>
-              <div style="font-size:20px;color:#fff;margin-top:6px;" [style.color]="diasColor()">
+              <div style="font-size:20px;color:#f4f1eb;margin-top:6px;" [style.color]="diasColor()">
                 {{ cliente()!.fecha_vencimiento | dateEc }}
               </div>
               <div style="font-size:13px;margin-top:4px;" [style.color]="diasColor()">
@@ -81,7 +81,7 @@ interface Pago {
 
             <div class="stat-card">
               <div class="stat-card__label">Último Pago</div>
-              <div style="font-size:16px;color:#fff;margin-top:6px;">
+              <div style="font-size:16px;color:#f4f1eb;margin-top:6px;">
                 {{ cliente()!.ultimo_pago_fecha | dateEc }}
               </div>
             </div>
@@ -97,21 +97,21 @@ interface Pago {
                 <span class="data-table-wrapper__title">Pagar por Transferencia</span>
               </div>
               <div style="padding:24px;">
-                <p style="font-family:'Inter',sans-serif;font-size:13px;color:#aaa;margin-bottom:16px;">
+                <p style="font-family:'Manrope',sans-serif;font-size:13px;color:#d2cbc1;margin-bottom:16px;">
                   Realiza una transferencia bancaria y envía el comprobante por WhatsApp al número del coach.
                   El sistema lo validará automáticamente.
                 </p>
-                <div style="background:#1e1e1e;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+                <div style="background:#1d2022;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;">
                   <div style="display:flex;justify-content:space-between;">
-                    <span style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.1em;">Monto</span>
-                    <span style="font-weight:700;color:#4caf50;font-size:16px;">$ {{ cliente()!.monto_plan }}</span>
+                    <span style="font-size:12px;color:#938C84;text-transform:uppercase;letter-spacing:0.1em;">Monto</span>
+                    <span style="font-weight:700;color:#3D8B6D;font-size:16px;">$ {{ cliente()!.monto_plan }}</span>
                   </div>
                   <div style="display:flex;justify-content:space-between;">
-                    <span style="font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.1em;">Bancos aceptados</span>
-                    <span style="font-size:13px;color:#ccc;">Pichincha · Produbanco · Guayaquil · Pacífico</span>
+                    <span style="font-size:12px;color:#938C84;text-transform:uppercase;letter-spacing:0.1em;">Bancos aceptados</span>
+                    <span style="font-size:13px;color:#d2cbc1;">Pichincha · Produbanco · Guayaquil · Pacífico</span>
                   </div>
                 </div>
-                <p style="font-size:12px;color:#555;margin-top:12px;">
+                <p style="font-size:12px;color:#938C84;margin-top:12px;">
                   Envía el comprobante por WhatsApp al coach. El sistema procesará automáticamente.
                 </p>
               </div>
@@ -124,11 +124,11 @@ interface Pago {
                 <span class="data-table-wrapper__title">Pagar con Tarjeta</span>
               </div>
               <div style="padding:24px;">
-                <p style="font-family:'Inter',sans-serif;font-size:13px;color:#aaa;margin-bottom:16px;">
+                <p style="font-family:'Manrope',sans-serif;font-size:13px;color:#d2cbc1;margin-bottom:16px;">
                   Tu link de pago con tarjeta de crédito/débito está listo.
                 </p>
                 <a [href]="cliente()!.link_pago_actual" target="_blank" class="btn btn--primary" style="display:inline-flex;width:100%;justify-content:center;">
-                  💳 Pagar con Payphone
+                  Pagar con Payphone
                 </a>
               </div>
             </div>
@@ -140,7 +140,7 @@ interface Pago {
               <span class="data-table-wrapper__title">Historial</span>
             </div>
             @if (pagos().length === 0) {
-              <div style="padding:24px;text-align:center;color:#666;">Sin pagos registrados.</div>
+              <div style="padding:24px;text-align:center;color:#938C84;">Sin pagos registrados.</div>
             } @else {
               <table class="data-table">
                 <thead>
@@ -150,7 +150,7 @@ interface Pago {
                   @for (p of pagos(); track p.id) {
                     <tr>
                       <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
-                      <td style="font-weight:600;color:#4caf50;">$ {{ p.monto }}</td>
+                      <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
                       <td><span class="badge badge--{{ p.estado?.toLowerCase() }}">{{ p.estado }}</span></td>
                     </tr>
                   }
@@ -199,10 +199,10 @@ export class MiPagoComponent implements OnInit {
 
   diasColor(): string {
     const venc = this.cliente()?.fecha_vencimiento;
-    if (!venc) return '#666';
+    if (!venc) return '#938C84';
     const diff = Math.ceil((new Date(venc).getTime() - Date.now()) / 86400000);
-    if (diff > 5) return '#4caf50';
-    if (diff >= 0) return '#ff9800';
-    return '#ef5350';
+    if (diff > 5) return '#3D8B6D';
+    if (diff >= 0) return '#C58A2A';
+    return '#C1454A';
   }
 }
