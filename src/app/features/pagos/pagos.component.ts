@@ -106,7 +106,7 @@ interface Pago {
                   {{ formatReferencia(p.referencia_transaccion) }}
                 </td>
                 <td>
-                  <span class="badge badge--{{ p.estado?.toLowerCase() }}">{{ p.estado }}</span>
+                  <span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span>
                 </td>
               </tr>
             } @empty {

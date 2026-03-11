@@ -94,12 +94,12 @@ type ModalMode = 'crear' | 'editar' | null;
                   <div style="font-size:11px;color:#938C84;">{{ c.telefono_whatsapp }}</div>
                 </td>
                 <td>
-                  <span class="badge badge--{{ c.plan?.toLowerCase() }}">
+                  <span class="badge badge--{{ c.plan.toLowerCase() }}">
                     {{ c.plan | planLabel : c.monto_plan }}
                   </span>
                 </td>
                 <td>
-                  <span class="badge badge--{{ c.estado?.toLowerCase() }}">{{ c.estado }}</span>
+                  <span class="badge badge--{{ c.estado.toLowerCase() }}">{{ c.estado }}</span>
                 </td>
                 <td style="font-size:13px;">{{ c.metodo_pago }}</td>
                 <td>
@@ -255,7 +255,7 @@ type ModalMode = 'crear' | 'editar' | null;
                       <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
                       <td><span class="badge badge--mensual">{{ p.metodo }}</span></td>
                       <td style="font-size:13px;">{{ p.banco || '—' }}</td>
-                      <td><span class="badge badge--{{ p.estado?.toLowerCase() }}">{{ p.estado }}</span></td>
+                      <td><span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span></td>
                     </tr>
                   }
                 </tbody>

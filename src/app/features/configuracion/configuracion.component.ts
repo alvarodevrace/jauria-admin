@@ -102,28 +102,28 @@ interface AuditRow {
           <button class="btn btn--ghost btn--sm" (click)="loadAudit()">↻</button>
         </div>
         @if (auditLoading()) {
-          <div style="padding:40px;text-align:center;color:#666;">Cargando...</div>
+          <div style="padding:40px;text-align:center;color:#938C84;">Cargando...</div>
         } @else if (auditRows().length === 0) {
-          <div style="padding:40px;text-align:center;color:#666;">Sin registros aún.</div>
+          <div style="padding:40px;text-align:center;color:#938C84;">Sin registros aún.</div>
         } @else {
           <div style="max-height:500px;overflow-y:auto;">
             @for (row of auditRows(); track row.id) {
-              <div style="padding:14px 20px;border-bottom:1px solid #1e1e1e;">
+              <div style="padding:14px 20px;border-bottom:1px solid #2b3033;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
                   <div>
-                    <div style="font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:#fff;">
+                    <div style="font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;color:#f4f1eb;">
                       {{ row.accion }}
                     </div>
-                    @if (row.detalle?.['vars']) {
-                      <div style="font-size:11px;color:#666;margin-top:3px;">
+                    @if (row.detalle['vars']) {
+                      <div style="font-size:11px;color:#938C84;margin-top:3px;">
                         Vars: {{ $any(row.detalle['vars']).join(', ') }}
                       </div>
                     }
-                    <div style="font-size:11px;color:#444;margin-top:2px;">
+                    <div style="font-size:11px;color:#938C84;margin-top:2px;">
                       {{ row.profiles?.nombre_completo ?? 'Sistema' }}
                     </div>
                   </div>
-                  <div style="font-size:11px;color:#555;white-space:nowrap;flex-shrink:0;">
+                  <div style="font-size:11px;color:#938C84;white-space:nowrap;flex-shrink:0;">
                     {{ row.created_at | dateEc : 'dd/MM HH:mm' }}
                   </div>
                 </div>

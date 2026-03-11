@@ -151,7 +151,7 @@ interface Pago {
                     <tr>
                       <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
                       <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
-                      <td><span class="badge badge--{{ p.estado?.toLowerCase() }}">{{ p.estado }}</span></td>
+                      <td><span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span></td>
                     </tr>
                   }
                 </tbody>
