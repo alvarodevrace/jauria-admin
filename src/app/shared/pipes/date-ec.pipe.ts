@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { formatInTimeZone } from 'date-fns-tz';
+import { es } from 'date-fns/locale';
 
 const TZ = 'America/Guayaquil';
 
@@ -9,7 +10,8 @@ export class DateEcPipe implements PipeTransform {
     if (!value) return '—';
     try {
       const date = typeof value === 'string' ? new Date(value) : value;
-      return formatInTimeZone(date, TZ, fmt);
+      const formatted = formatInTimeZone(date, TZ, fmt, { locale: es });
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     } catch {
       return String(value);
     }
