@@ -171,10 +171,30 @@ export class SupabaseService {
     return this.client.from('clases').update(data).eq('id', id);
   }
 
+  async deleteClase(id: number) {
+    return this.client.from('clases').delete().eq('id', id);
+  }
+
   // ── Inscripciones ─────────────────────────────────────────────────────────
 
   async inscribirseAClase(claseId: number, userId: string) {
     return this.client.from('inscripciones').insert({ clase_id: claseId, user_id: userId }).select().single();
+  }
+
+  async getInscripcionByClaseYUsuario(claseId: number, userId: string) {
+    return this.client.from('inscripciones')
+      .select('*')
+      .eq('clase_id', claseId)
+      .eq('user_id', userId)
+      .maybeSingle();
+  }
+
+  async reactivarInscripcion(inscripcionId: number) {
+    return this.client.from('inscripciones')
+      .update({ estado: 'inscrito' })
+      .eq('id', inscripcionId)
+      .select()
+      .single();
   }
 
   async cancelarInscripcion(claseId: number, userId: string) {
@@ -199,6 +219,12 @@ export class SupabaseService {
       .select('clase_id, estado')
       .in('clase_id', claseIds)
       .neq('estado', 'cancelado');
+  }
+
+  async deleteInscripcionesByClase(claseId: number) {
+    return this.client.from('inscripciones')
+      .delete()
+      .eq('clase_id', claseId);
   }
 
   async getInscripcionesByUser(userId: string) {

@@ -292,6 +292,12 @@ type Vista = 'semana' | 'lista';
                         >
                           {{ c.cancelada ? 'Cancelada' : 'Cancelar' }}
                         </button>
+                        <button
+                          class="btn btn--ghost btn--sm"
+                          (click)="eliminarClase(c)"
+                        >
+                          Eliminar
+                        </button>
                       }
                     </div>
                   </td>
@@ -1000,6 +1006,18 @@ export class ClasesComponent implements OnInit {
       await this.supabase.cancelarInscripcion(clase.id, userId);
       this.toast.info('Inscripción cancelada');
     } else {
+      const { data: existente } = await this.supabase.getInscripcionByClaseYUsuario(
+        clase.id,
+        userId,
+      );
+
+      if (existente?.estado && existente.estado !== 'cancelado') {
+        this.toast.info('Ya estabas inscrito en esta clase.');
+        await Promise.all([this.cargarMisInscripciones(), this.cargarClases()]);
+        this.loadingClase.set(null);
+        return;
+      }
+
       // Verificar cupos disponibles
       const { data: ins } = await this.supabase.getInscripcionesByClase(
         clase.id,
@@ -1010,17 +1028,34 @@ export class ClasesComponent implements OnInit {
         this.loadingClase.set(null);
         return;
       }
-      const { error } = await this.supabase.inscribirseAClase(clase.id, userId);
-      if (error?.code === '23505') {
-        this.toast.warning('Ya estás inscrito');
-      } else if (error) {
-        this.toast.error(error.message);
+
+      if (existente?.estado === 'cancelado') {
+        const { error } = await this.supabase.reactivarInscripcion(existente.id);
+        if (error) {
+          this.toast.error(error.message);
+        } else {
+          this.toast.success('¡Inscripción confirmada!');
+          this.sentry.addBreadcrumb(
+            `Reactivacion clase ${clase.tipo} ${clase.fecha}`,
+            'clases',
+          );
+        }
       } else {
-        this.toast.success('¡Inscripción confirmada!');
-        this.sentry.addBreadcrumb(
-          `Inscripción clase ${clase.tipo} ${clase.fecha}`,
-          'clases',
-        );
+        const { error } = await this.supabase.inscribirseAClase(clase.id, userId);
+        if (error?.code === '23505') {
+          this.toast.info('Ya estabas inscrito en esta clase.');
+          await Promise.all([this.cargarMisInscripciones(), this.cargarClases()]);
+          this.loadingClase.set(null);
+          return;
+        } else if (error) {
+          this.toast.error(error.message);
+        } else {
+          this.toast.success('¡Inscripción confirmada!');
+          this.sentry.addBreadcrumb(
+            `Inscripción clase ${clase.tipo} ${clase.fecha}`,
+            'clases',
+          );
+        }
       }
     }
 
@@ -1063,6 +1098,36 @@ export class ClasesComponent implements OnInit {
     }
     this.toast.info('Clase cancelada');
     await this.cargarClases();
+  }
+
+  async eliminarClase(clase: Clase) {
+    const confirmacion = window.confirm(
+      `Eliminar "${clase.tipo}" del ${clase.fecha} a las ${clase.hora_inicio}. Esta acción quitará también sus inscripciones.`,
+    );
+
+    if (!confirmacion) return;
+
+    const { error: inscripcionesError } = await this.supabase.deleteInscripcionesByClase(
+      clase.id,
+    );
+
+    if (inscripcionesError) {
+      this.toast.error(inscripcionesError.message);
+      return;
+    }
+
+    const { error } = await this.supabase.deleteClase(clase.id);
+    if (error) {
+      this.toast.error(error.message);
+      return;
+    }
+
+    if (this.claseSeleccionada()?.id === clase.id) {
+      this.claseSeleccionada.set(null);
+    }
+
+    this.toast.success('Clase eliminada');
+    await Promise.all([this.cargarMisInscripciones(), this.cargarClases()]);
   }
 
   inscripcionBadge(estado: string): string {
