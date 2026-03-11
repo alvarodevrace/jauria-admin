@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupabaseService } from '../../../core/services/supabase.service';
@@ -17,7 +17,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
         </div>
 
         @if (tokenValido()) {
-          <p style="font-family:'Inter',sans-serif;font-size:13px;color:#666;text-align:center;margin-bottom:24px;">
+          <p style="font-family:'Manrope',sans-serif;font-size:13px;color:#938C84;text-align:center;margin-bottom:24px;">
             Ingresa tu nueva contraseña. Mínimo 8 caracteres.
           </p>
 
@@ -65,7 +65,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           <div class="alert alert--error" style="text-align:center;padding:24px;">
             <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
             <strong>Enlace inválido o expirado</strong>
-            <p style="margin-top:8px;font-size:13px;color:#aaa;">
+            <p style="margin-top:8px;font-size:13px;color:#d2cbc1;">
               El enlace de recuperación expiró o ya fue usado. Solicita uno nuevo.
             </p>
           </div>
@@ -73,7 +73,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
             Solicitar nuevo enlace
           </button>
         } @else {
-          <div style="text-align:center;padding:40px;color:#666;">
+          <div style="text-align:center;padding:40px;color:#938c84;">
             Verificando enlace...
           </div>
         }
@@ -91,21 +91,21 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0a0a0a;
+      background: #0e0f10;
       padding: 24px;
     }
     .auth-card {
-      background: #141414;
-      border: 1px solid #2a2a2a;
+      background: #151718;
+      border: 1px solid #2b3033;
       border-radius: 16px;
       padding: 40px;
       width: 100%;
       max-width: 400px;
       &__header { text-align: center; margin-bottom: 24px; }
-      &__title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 0.1em; color: #B71C1C; margin: 0; }
-      &__subtitle { font-family: 'Inter', sans-serif; font-size: 13px; color: #666; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
-      &__footer { text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; color: #555; margin-top: 20px;
-        a { color: #B71C1C; font-weight: 600; &:hover { text-decoration: underline; } }
+      &__title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 0.1em; color: #A61F24; margin: 0; }
+      &__subtitle { font-family: 'Manrope', sans-serif; font-size: 13px; color: #938C84; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
+      &__footer { text-align: center; font-family: 'Manrope', sans-serif; font-size: 13px; color: #938C84; margin-top: 20px;
+        a { color: #A61F24; font-weight: 700; &:hover { text-decoration: underline; } }
       }
     }
     .auth-form__submit { width: 100%; margin-top: 8px; padding: 12px; font-size: 14px; }
@@ -114,6 +114,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
 export class ResetPasswordComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   password = '';
   confirmPassword = '';
@@ -122,35 +123,45 @@ export class ResetPasswordComponent implements OnInit {
   exito = signal('');
   tokenValido = signal(false);
   tokenInvalido = signal(false);
+  private redirectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private tokenCheckTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit() {
-    // Supabase pone el access_token en el hash de la URL cuando el usuario
-    // hace clic en el enlace de recuperación: #access_token=...&type=recovery
     const hash = window.location.hash;
-    if (hash.includes('type=recovery') || hash.includes('access_token')) {
-      // Supabase SDK detecta automáticamente el token del hash y establece la sesión
-      this.supabase.client.auth.onAuthStateChange((event) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          this.tokenValido.set(true);
-        }
-      });
-      // Dar 2 segundos para que el SDK procese el hash
-      setTimeout(() => {
-        if (!this.tokenValido()) {
-          // Verificar si ya hay sesión activa (el SDK la procesó antes del listener)
-          this.supabase.client.auth.getSession().then(({ data }) => {
-            if (data.session) {
-              this.tokenValido.set(true);
-            } else {
-              this.tokenInvalido.set(true);
-            }
-          });
-        }
-      }, 2000);
-    } else {
-      // Sin hash → enlace inválido
+    if (!hash.includes('type=recovery') && !hash.includes('access_token')) {
       this.tokenInvalido.set(true);
+      return;
     }
+
+    const { data: { subscription } } = this.supabase.client.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        this.tokenValido.set(true);
+        this.tokenInvalido.set(false);
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      subscription.unsubscribe();
+      if (this.redirectTimeoutId) clearTimeout(this.redirectTimeoutId);
+      if (this.tokenCheckTimeoutId) clearTimeout(this.tokenCheckTimeoutId);
+    });
+
+    this.tokenCheckTimeoutId = setTimeout(() => {
+      void this.validarSesionRecuperacion();
+    }, 1500);
+  }
+
+  private async validarSesionRecuperacion() {
+    if (this.tokenValido()) return;
+
+    const { data } = await this.supabase.client.auth.getSession();
+    if (data.session) {
+      this.tokenValido.set(true);
+      this.tokenInvalido.set(false);
+      return;
+    }
+
+    this.tokenInvalido.set(true);
   }
 
   async onSubmit() {
@@ -179,7 +190,9 @@ export class ResetPasswordComponent implements OnInit {
     }
 
     this.exito.set('¡Contraseña actualizada! Redirigiendo...');
-    setTimeout(() => this.router.navigate(['/auth/login']), 2500);
+    this.redirectTimeoutId = setTimeout(() => {
+      void this.router.navigate(['/auth/login']);
+    }, 2500);
   }
 
   irAForgot() { this.router.navigate(['/auth/forgot-password']); }

@@ -1,4 +1,5 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
@@ -114,7 +115,7 @@ import { AuthService } from '../../auth/auth.service';
     .sidebar-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(8, 9, 10, 0.7);
       z-index: 999;
     }
     .sidebar__logo {
@@ -125,14 +126,14 @@ import { AuthService } from '../../auth/auth.service';
     .sidebar__logo-icon {
       width: 36px;
       height: 36px;
-      background: #B71C1C;
+      background: #A61F24;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Bebas Neue', sans-serif;
       font-size: 20px;
-      color: #fff;
+      color: #f4f1eb;
       flex-shrink: 0;
     }
     .sidebar__logo-name {
@@ -140,15 +141,15 @@ import { AuthService } from '../../auth/auth.service';
       font-family: 'Bebas Neue', sans-serif;
       font-size: 18px;
       letter-spacing: 0.05em;
-      color: #fff;
+      color: #f4f1eb;
       text-transform: uppercase;
       line-height: 1;
     }
     .sidebar__logo-sub {
       display: block;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Manrope', sans-serif;
       font-size: 10px;
-      color: #666;
+      color: #938c84;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       margin-top: 2px;
@@ -168,14 +169,14 @@ import { AuthService } from '../../auth/auth.service';
     .sidebar__user-avatar {
       width: 30px;
       height: 30px;
-      background: #B71C1C;
+      background: #A61F24;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Bebas Neue', sans-serif;
       font-size: 13px;
-      color: #fff;
+      color: #f4f1eb;
       flex-shrink: 0;
     }
     .sidebar__user-text {
@@ -184,18 +185,18 @@ import { AuthService } from '../../auth/auth.service';
       min-width: 0;
     }
     .sidebar__user-name {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Manrope', sans-serif;
       font-size: 13px;
       font-weight: 600;
-      color: #fff;
+      color: #f4f1eb;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
     .sidebar__user-role {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Manrope', sans-serif;
       font-size: 10px;
-      color: #666;
+      color: #938c84;
       text-transform: capitalize;
     }
     .sidebar__footer {
@@ -205,8 +206,8 @@ import { AuthService } from '../../auth/auth.service';
     }
     .sidebar__logout {
       background: none;
-      border: 1px solid #2a2a2a;
-      color: #666;
+      border: 1px solid #2b3033;
+      color: #938c84;
       width: 30px;
       height: 30px;
       border-radius: 6px;
@@ -217,19 +218,25 @@ import { AuthService } from '../../auth/auth.service';
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      &:hover { border-color: #B71C1C; color: #B71C1C; }
+      &:hover { border-color: #A61F24; color: #A61F24; background: #1d2022; }
     }
   `],
 })
 export class SidebarComponent {
   auth = inject(AuthService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   mobileOpen = signal(false);
 
   constructor() {
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      this.mobileOpen.set(false);
-    });
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.mobileOpen.set(false);
+      });
   }
 
   open()  { this.mobileOpen.set(true); }

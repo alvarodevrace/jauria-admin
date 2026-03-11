@@ -186,9 +186,14 @@ export class LeadsComponent implements OnInit {
   }
 
   exportCsv() {
+    const escapeCsv = (value: unknown) => {
+      const normalized = String(value ?? '');
+      return `"${normalized.replace(/"/g, '""')}"`;
+    };
+
     const headers = ['Fecha', 'Nombre', 'Email', 'Teléfono', 'Programa', 'Mensaje'];
     const rows = this.filteredLeads().map((l) => [l.created_at, l.nombre, l.email, l.telefono, l.programa, l.mensaje]);
-    const csv = [headers, ...rows].map((r) => r.map(String).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r) => r.map(escapeCsv).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

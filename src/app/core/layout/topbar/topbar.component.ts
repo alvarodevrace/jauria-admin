@@ -1,5 +1,6 @@
-import { Component, inject, Output, EventEmitter, computed, signal } from '@angular/core';
+import { Component, DestroyRef, inject, Output, EventEmitter, computed, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 
@@ -80,6 +81,7 @@ export class TopbarComponent {
   @Output() menuClick = new EventEmitter<void>();
   auth = inject(AuthService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   private currentUrl = signal(this.getCurrentUrl());
 
   pageTitle = computed(() => {
@@ -87,9 +89,14 @@ export class TopbarComponent {
   });
 
   constructor() {
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      this.currentUrl.set(this.getCurrentUrl());
-    });
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.currentUrl.set(this.getCurrentUrl());
+      });
   }
 
   private getCurrentUrl(): string {

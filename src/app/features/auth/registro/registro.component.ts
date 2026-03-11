@@ -17,10 +17,10 @@ import { SupabaseService } from '../../../core/services/supabase.service';
         </div>
 
         <!-- Instrucción al atleta -->
-        <div style="background:#1e1e1e;border-radius:8px;padding:14px;margin-bottom:20px;border-left:3px solid #B71C1C;">
-          <p style="font-family:'Inter',sans-serif;font-size:12px;color:#aaa;line-height:1.6;margin:0;">
+        <div style="background:#1d2022;border-radius:8px;padding:14px;margin-bottom:20px;border-left:3px solid #A61F24;">
+          <p style="font-family:'Manrope',sans-serif;font-size:12px;color:#d2cbc1;line-height:1.6;margin:0;">
             Puedes crear tu cuenta solo si el coach ya registró tu membresía y
-            tienes un <strong style="color:#fff;">plan activo</strong>.
+            tienes un <strong style="color:#f4f1eb;">plan activo</strong>.
             Usa el mismo email que diste al coach.
           </p>
         </div>
@@ -52,7 +52,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           <div class="alert alert--success" style="text-align:center;padding:24px;">
             <div style="font-size:32px;margin-bottom:12px;">✅</div>
             <strong>¡Cuenta creada!</strong>
-            <p style="margin-top:8px;font-size:13px;color:#aaa;">
+            <p style="margin-top:8px;font-size:13px;color:#d2cbc1;">
               Ahora puedes iniciar sesión y ver tus clases y membresía.
             </p>
           </div>
@@ -74,21 +74,21 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0a0a0a;
+      background: #0e0f10;
       padding: 24px;
     }
     .auth-card {
-      background: #141414;
-      border: 1px solid #2a2a2a;
+      background: #151718;
+      border: 1px solid #2b3033;
       border-radius: 16px;
       padding: 40px;
       width: 100%;
       max-width: 420px;
       &__header { text-align: center; margin-bottom: 20px; }
-      &__title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 0.1em; color: #B71C1C; margin: 0; }
-      &__subtitle { font-family: 'Inter', sans-serif; font-size: 13px; color: #666; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
-      &__footer { text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; color: #666; margin-top: 20px;
-        a { color: #B71C1C; font-weight: 600; &:hover { text-decoration: underline; } }
+      &__title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 0.1em; color: #A61F24; margin: 0; }
+      &__subtitle { font-family: 'Manrope', sans-serif; font-size: 13px; color: #938C84; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
+      &__footer { text-align: center; font-family: 'Manrope', sans-serif; font-size: 13px; color: #938C84; margin-top: 20px;
+        a { color: #A61F24; font-weight: 700; &:hover { text-decoration: underline; } }
       }
     }
     .auth-form__submit { width: 100%; margin-top: 8px; padding: 12px; font-size: 14px; }
@@ -110,12 +110,14 @@ export class RegistroComponent {
     if (!this.nombre || !this.email || !this.password) return;
     this.loading.set(true);
     this.error.set('');
+    const normalizedEmail = this.email.trim().toLowerCase();
+    const normalizedNombre = this.nombre.trim();
 
     // ── Paso 1: verificar que el email existe en clientes con estado='Activo' ──
     const { data: clientes, error: clienteErr } = await this.supabase.client
       .from('clientes')
       .select('id_cliente, nombre_completo, estado')
-      .eq('email', this.email.toLowerCase().trim())
+      .eq('email', normalizedEmail)
       .eq('estado', 'Activo')
       .limit(1);
 
@@ -130,7 +132,7 @@ export class RegistroComponent {
       const { data: existe } = await this.supabase.client
         .from('clientes')
         .select('estado')
-        .eq('email', this.email.toLowerCase().trim())
+        .eq('email', normalizedEmail)
         .limit(1);
 
       if (existe && existe.length > 0) {
@@ -151,9 +153,9 @@ export class RegistroComponent {
 
     // ── Paso 2: crear cuenta en Supabase Auth ──────────────────────────────────
     const { error: authErr } = await this.auth.registro(
-      this.email.trim(),
+      normalizedEmail,
       this.password,
-      this.nombre || cliente.nombre_completo
+      normalizedNombre || cliente.nombre_completo
     );
 
     if (authErr) {
@@ -163,7 +165,7 @@ export class RegistroComponent {
     }
 
     // ── Paso 3: login automático para obtener el ID del nuevo usuario ──────────
-    const { error: loginErr } = await this.auth.login(this.email.trim(), this.password);
+    const { error: loginErr } = await this.auth.login(normalizedEmail, this.password);
 
     if (loginErr) {
       this.error.set(
@@ -186,7 +188,7 @@ export class RegistroComponent {
     const { error: profileErr } = await this.supabase.updateProfile(userId, {
       id_cliente: cliente.id_cliente,
       rol: 'atleta',
-      nombre_completo: this.nombre || cliente.nombre_completo,
+      nombre_completo: normalizedNombre || cliente.nombre_completo,
     });
 
     if (profileErr) {
@@ -197,8 +199,8 @@ export class RegistroComponent {
       return;
     }
 
-    // Hacer logout para que el atleta inicie sesión de forma limpia
-    await this.auth.logout();
+    // Cerramos la sesión sin redirigir para poder mostrar el estado de éxito local.
+    await this.supabase.client.auth.signOut();
 
     this.loading.set(false);
     this.cuentaCreada.set(true);

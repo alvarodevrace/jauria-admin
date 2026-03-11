@@ -153,11 +153,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private barChartInstance?: Chart;
   private donutChartInstance?: Chart;
+  private chartsInitTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit()        { this.loadData(); this.refreshStatus(); }
   ngAfterViewInit() { /* charts se crean después de loadData */ }
 
   ngOnDestroy() {
+    if (this.chartsInitTimeoutId) clearTimeout(this.chartsInitTimeoutId);
     this.barChartInstance?.destroy();
     this.donutChartInstance?.destroy();
   }
@@ -196,7 +198,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.alertas.set(alerts);
 
     // Charts después del DOM
-    setTimeout(() => this.initCharts(pd, cd), 100);
+    if (this.chartsInitTimeoutId) clearTimeout(this.chartsInitTimeoutId);
+    this.chartsInitTimeoutId = setTimeout(() => this.initCharts(pd, cd), 100);
   }
 
   private initCharts(pagos: Record<string, unknown>[], clientes: Record<string, unknown>[]) {

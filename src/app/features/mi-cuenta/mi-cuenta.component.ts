@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/auth/auth.service';
@@ -93,7 +93,7 @@ interface ClientePlan {
     }
   `],
 })
-export class MiCuentaComponent implements OnInit {
+export class MiCuentaComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
@@ -102,6 +102,7 @@ export class MiCuentaComponent implements OnInit {
   saving = signal(false);
   perfilMsg = signal('');
   cliente = signal<ClientePlan | null>(null);
+  private perfilMsgTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   async ngOnInit() {
     this.nombre = this.auth.profile()?.nombre_completo ?? '';
@@ -117,10 +118,21 @@ export class MiCuentaComponent implements OnInit {
     const userId = this.auth.currentUser()?.id;
     if (!userId || !this.nombre) return;
     this.saving.set(true);
-    await this.supabase.updateProfile(userId, { nombre_completo: this.nombre });
+    const { error } = await this.supabase.updateProfile(userId, { nombre_completo: this.nombre.trim() });
     this.saving.set(false);
+
+    if (error) {
+      this.toast.error('No se pudo actualizar el perfil');
+      return;
+    }
+
     this.perfilMsg.set('Perfil actualizado');
     this.toast.success('Perfil actualizado');
-    setTimeout(() => this.perfilMsg.set(''), 3000);
+    if (this.perfilMsgTimeoutId) clearTimeout(this.perfilMsgTimeoutId);
+    this.perfilMsgTimeoutId = setTimeout(() => this.perfilMsg.set(''), 3000);
+  }
+
+  ngOnDestroy() {
+    if (this.perfilMsgTimeoutId) clearTimeout(this.perfilMsgTimeoutId);
   }
 }

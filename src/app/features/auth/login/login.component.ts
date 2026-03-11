@@ -36,12 +36,9 @@ import { AuthService } from '../../../core/auth/auth.service';
           </div>
 
           <div class="form-group">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <label class="form-label" for="password" style="margin-bottom:0;">Contraseña</label>
-              <a routerLink="/auth/forgot-password"
-                style="font-family:'Inter',sans-serif;font-size:11px;color:#666;text-decoration:none;letter-spacing:0.03em;"
-                onmouseover="this.style.color='#B71C1C'"
-                onmouseout="this.style.color='#666'">
+            <div class="auth-form__row">
+              <label class="form-label auth-form__label" for="password">Contraseña</label>
+              <a routerLink="/auth/forgot-password" class="auth-form__link">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
@@ -83,13 +80,13 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0a0a0a;
+      background: #0e0f10;
       padding: 24px;
     }
 
     .auth-card {
-      background: #141414;
-      border: 1px solid #2a2a2a;
+      background: #151718;
+      border: 1px solid #2b3033;
       border-radius: 16px;
       padding: 40px;
       width: 100%;
@@ -104,14 +101,14 @@ import { AuthService } from '../../../core/auth/auth.service';
         font-family: 'Bebas Neue', sans-serif;
         font-size: 48px;
         letter-spacing: 0.1em;
-        color: #B71C1C;
+        color: #a61f24;
         margin: 0;
       }
 
       &__subtitle {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-size: 13px;
-        color: #666;
+        color: #938c84;
         letter-spacing: 0.05em;
         text-transform: uppercase;
         margin-top: 4px;
@@ -119,13 +116,13 @@ import { AuthService } from '../../../core/auth/auth.service';
 
       &__footer {
         text-align: center;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-size: 13px;
-        color: #666;
+        color: #938c84;
         margin-top: 20px;
 
         a {
-          color: #B71C1C;
+          color: #a61f24;
           font-weight: 600;
           &:hover { text-decoration: underline; }
         }
@@ -134,21 +131,46 @@ import { AuthService } from '../../../core/auth/auth.service';
       &__notice {
         margin-bottom: 20px;
         padding: 14px 16px;
-        border-left: 3px solid #B71C1C;
-        background: #1e1e1e;
+        border-left: 3px solid #a61f24;
+        background: #1d2022;
         border-radius: 8px;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-size: 12px;
         line-height: 1.6;
-        color: #aaa;
+        color: #d2cbc1;
 
         strong {
-          color: #fff;
+          color: #f4f1eb;
         }
       }
     }
 
     .auth-form {
+      &__row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      &__label {
+        margin-bottom: 0;
+      }
+
+      &__link {
+        font-family: 'Manrope', sans-serif;
+        font-size: 11px;
+        color: #938c84;
+        text-decoration: none;
+        letter-spacing: 0.03em;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: #a61f24;
+        }
+      }
+
       &__submit {
         width: 100%;
         margin-top: 8px;
@@ -178,7 +200,7 @@ export class LoginComponent {
     this.loading.set(true);
     this.error.set('');
 
-    const { error } = await this.auth.login(this.email, this.password);
+    const { error } = await this.auth.login(this.email.trim().toLowerCase(), this.password);
 
     if (error) {
       this.error.set(error);
@@ -186,10 +208,9 @@ export class LoginComponent {
       return;
     }
 
-    // Navigate based on role
     const rol = this.auth.rol();
     const dest = rol === 'admin' ? '/app/dashboard' : '/app/clases';
-    this.router.navigate([dest]);
+    await this.router.navigate([dest]);
     this.loading.set(false);
   }
 }
