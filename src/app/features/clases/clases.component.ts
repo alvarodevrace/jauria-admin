@@ -902,12 +902,16 @@ export class ClasesComponent implements OnInit {
     return 'Inscribirse';
   }
 
-  esClaseVisible(clase: Pick<Clase, 'fecha' | 'hora_inicio'>): boolean {
-    return this.claseStart(clase).getTime() > Date.now();
+  esClaseVisible(clase: Pick<Clase, 'fecha' | 'hora_inicio' | 'hora_fin'>): boolean {
+    return this.claseEnd(clase).getTime() > Date.now();
   }
 
   private claseStart(clase: Pick<Clase, 'fecha' | 'hora_inicio'>): Date {
     return parseISO(`${clase.fecha}T${clase.hora_inicio}`);
+  }
+
+  private claseEnd(clase: Pick<Clase, 'fecha' | 'hora_inicio' | 'hora_fin'>): Date {
+    return parseISO(`${clase.fecha}T${clase.hora_fin ?? clase.hora_inicio}`);
   }
 
   private async cargarResumenInscritos(clases: Clase[]) {

@@ -30,6 +30,7 @@ interface ClaseDisponible {
   id: number;
   fecha: string;
   hora_inicio: string;
+  hora_fin: string;
   cancelada: boolean;
 }
 
@@ -150,6 +151,14 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
   clasesDisponibles = signal(0);
   private perfilMsgTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  private claseStart(fecha: string, horaInicio: string): number {
+    return parseISO(`${fecha}T${horaInicio}`).getTime();
+  }
+
+  private claseEnd(fecha: string, horaInicio: string, horaFin?: string): number {
+    return parseISO(`${fecha}T${horaFin ?? horaInicio}`).getTime();
+  }
+
   async ngOnInit() {
     this.nombre = this.auth.profile()?.nombre_completo ?? '';
 
@@ -171,7 +180,11 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
           Boolean(
             inscripcion.clases &&
             !inscripcion.clases.cancelada &&
-            parseISO(`${inscripcion.clases.fecha}T${inscripcion.clases.hora_inicio}`).getTime() > Date.now(),
+            this.claseEnd(
+              inscripcion.clases.fecha,
+              inscripcion.clases.hora_inicio,
+              inscripcion.clases.hora_fin,
+            ) > Date.now(),
           ),
         );
 
@@ -180,8 +193,8 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
         .filter((clase): clase is NonNullable<MiInscripcion['clases']> => Boolean(clase))
         .sort(
           (a, b) =>
-            parseISO(`${a.fecha}T${a.hora_inicio}`).getTime()
-            - parseISO(`${b.fecha}T${b.hora_inicio}`).getTime(),
+            this.claseStart(a.fecha, a.hora_inicio)
+            - this.claseStart(b.fecha, b.hora_inicio),
         )[0] ?? null;
 
       this.proximaClase.set(proxima);
@@ -191,7 +204,7 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
         .filter(
           (clase) =>
             !clase.cancelada
-            && parseISO(`${clase.fecha}T${clase.hora_inicio}`).getTime() > Date.now()
+            && this.claseEnd(clase.fecha, clase.hora_inicio, clase.hora_fin) > Date.now()
             && !inscritosIds.has(clase.id),
         ).length;
 
