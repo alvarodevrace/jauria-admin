@@ -22,7 +22,7 @@ const ROUTE_TITLES: Record<string, string> = {
   standalone: true,
   template: `
     <header class="topbar">
-      <div style="display:flex;align-items:center;gap:16px;">
+      <div class="topbar__context">
         <button class="topbar__hamburger" (click)="menuClick.emit()" aria-label="Menú">
           <span></span><span></span><span></span>
         </button>
@@ -41,6 +41,12 @@ const ROUTE_TITLES: Record<string, string> = {
     </header>
   `,
   styles: [`
+    .topbar__context {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
     .topbar__hamburger {
       display: none;
       flex-direction: column;
@@ -58,6 +64,12 @@ const ROUTE_TITLES: Record<string, string> = {
         transition: 0.2s ease;
       }
       &:hover span { background: #f4f1eb; }
+    }
+    .topbar__title {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     @media (max-width: 1024px) {
       .topbar__hamburger { display: flex; }

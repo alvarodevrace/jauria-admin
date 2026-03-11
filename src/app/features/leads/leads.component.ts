@@ -44,7 +44,7 @@ interface Lead {
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Formulario de Contacto</span>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div class="toolbar-row">
           <div class="search-input">
             <input type="text" placeholder="Buscar por nombre, email o teléfono" [(ngModel)]="searchTerm" />
           </div>
@@ -59,7 +59,7 @@ interface Lead {
       </div>
 
       @if (loading()) {
-        <div style="padding:40px;text-align:center;color:#666;">Cargando...</div>
+        <div style="padding:40px;text-align:center;color:#938C84;">Cargando...</div>
       } @else {
         <table class="data-table">
           <thead>
@@ -76,24 +76,24 @@ interface Lead {
             @for (lead of filteredLeads(); track lead.id) {
               <tr>
                 <td style="font-size:12px;">{{ lead.created_at | dateEc : 'dd/MM/yy HH:mm' }}</td>
-                <td style="font-weight:600;color:#fff;">{{ lead.nombre }}</td>
+                <td style="font-weight:600;color:#f4f1eb;">{{ lead.nombre }}</td>
                 <td style="font-size:13px;">{{ lead.email }}</td>
                 <td style="font-size:13px;">{{ lead.telefono || '—' }}</td>
                 <td>
                   @if (lead.programa) {
                     <span class="badge badge--mensual">{{ lead.programa }}</span>
                   } @else {
-                    <span style="color:#666;">—</span>
+                    <span style="color:#938C84;">—</span>
                   }
                 </td>
-                <td style="font-size:12px;color:#aaa;max-width:260px;">
+                <td style="font-size:12px;color:#d2cbc1;max-width:260px;">
                   <button class="btn btn--ghost btn--sm" (click)="selectedLead.set(lead)">
                     {{ lead.mensaje ? 'Ver mensaje' : 'Sin mensaje' }}
                   </button>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">No hay leads aún</td></tr>
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:#938C84;">No hay leads aún</td></tr>
             }
           </tbody>
         </table>
@@ -108,7 +108,7 @@ interface Lead {
             <button class="btn btn--ghost btn--icon" (click)="selectedLead.set(null)">✕</button>
           </div>
           <div class="modal__body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="two-column-grid">
               <div class="stat-card">
                 <div class="stat-card__label">Nombre</div>
                 <div class="stat-card__value" style="font-size:22px;">{{ selectedLead()!.nombre }}</div>
@@ -118,7 +118,7 @@ interface Lead {
                 <div class="stat-card__value" style="font-size:22px;">{{ selectedLead()!.created_at | dateEc : 'dd/MM/yyyy HH:mm' }}</div>
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+            <div class="two-column-grid" style="margin-top:16px;">
               <div class="form-group">
                 <label class="form-label">Email</label>
                 <div class="form-control" style="display:flex;align-items:center;">{{ selectedLead()!.email }}</div>

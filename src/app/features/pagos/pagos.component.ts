@@ -46,7 +46,7 @@ interface Pago {
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Historial de Pagos</span>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div class="toolbar-row">
           <div class="search-input">
             <input type="text" placeholder="Buscar por cliente o ID" [(ngModel)]="searchTerm" (input)="applyFilter()" />
           </div>
@@ -71,7 +71,7 @@ interface Pago {
       </div>
 
       @if (loading()) {
-        <div style="padding:40px;text-align:center;color:#666;">
+        <div style="padding:40px;text-align:center;color:#938C84;">
           Cargando...
         </div>
       } @else {
@@ -92,17 +92,17 @@ interface Pago {
               <tr>
                 <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
                 <td>
-                  <div style="font-weight:600;color:#fff;">{{ p.nombre_cliente }}</div>
-                  <div style="font-size:12px;color:#666;">{{ p.id_cliente }}</div>
+                  <div style="font-weight:600;color:#f4f1eb;">{{ p.nombre_cliente }}</div>
+                  <div style="font-size:12px;color:#938C84;">{{ p.id_cliente }}</div>
                 </td>
-                <td style="font-weight:600;color:#4caf50;">$ {{ p.monto }}</td>
+                <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
                 <td>
                   <span class="badge badge--{{ p.metodo === 'TRANSFERENCIA' ? 'mensual' : 'trimestral' }}">
                     {{ p.metodo }}
                   </span>
                 </td>
                 <td style="font-size:13px;">{{ p.banco || '—' }}</td>
-                <td style="font-size:12px;color:#666;font-family:monospace;">
+                <td style="font-size:12px;color:#938C84;font-family:monospace;">
                   {{ formatReferencia(p.referencia_transaccion) }}
                 </td>
                 <td>
@@ -111,7 +111,7 @@ interface Pago {
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" style="text-align:center;padding:40px;color:#666;">
+                <td colspan="7" style="text-align:center;padding:40px;color:#938C84;">
                   No hay pagos registrados
                 </td>
               </tr>

@@ -281,7 +281,7 @@ type Vista = 'semana' | 'lista';
           </div>
           <div class="modal__body">
             <form (ngSubmit)="crearClase()">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="two-column-grid">
                 <div class="form-group">
                   <label class="form-label">Tipo *</label>
                   <select

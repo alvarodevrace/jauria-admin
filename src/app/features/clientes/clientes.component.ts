@@ -48,7 +48,7 @@ type ModalMode = 'crear' | 'editar' | null;
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Todos los Clientes</span>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div class="toolbar-row">
           <div class="search-input">
             <input type="text" placeholder="Buscar..." [(ngModel)]="searchTerm" (input)="applyFilter()" />
           </div>
@@ -70,7 +70,7 @@ type ModalMode = 'crear' | 'editar' | null;
       </div>
 
       @if (loading()) {
-        <div style="padding:40px;text-align:center;color:#666;">Cargando clientes...</div>
+        <div style="padding:40px;text-align:center;color:#938C84;">Cargando clientes...</div>
       } @else {
         <table class="data-table">
           <thead>
@@ -88,9 +88,9 @@ type ModalMode = 'crear' | 'editar' | null;
             @for (c of filtered(); track c.id_cliente) {
               <tr>
                 <td>
-                  <div style="font-weight:600;color:#fff;">{{ c.nombre_completo }}</div>
-                  <div style="font-size:11px;color:#666;margin-top:2px;">{{ c.email }}</div>
-                  <div style="font-size:11px;color:#555;">{{ c.telefono_whatsapp }}</div>
+                  <div style="font-weight:600;color:#f4f1eb;">{{ c.nombre_completo }}</div>
+                  <div style="font-size:11px;color:#938C84;margin-top:2px;">{{ c.email }}</div>
+                  <div style="font-size:11px;color:#938C84;">{{ c.telefono_whatsapp }}</div>
                 </td>
                 <td>
                   <span class="badge badge--{{ c.plan?.toLowerCase() }}">
@@ -105,7 +105,7 @@ type ModalMode = 'crear' | 'editar' | null;
                   <span [style.color]="diasColor(c.fecha_vencimiento)" style="font-size:13px;">
                     {{ c.fecha_vencimiento | dateEc }}
                   </span>
-                  <div style="font-size:11px;color:#555;">{{ diasRestantes(c.fecha_vencimiento) }}</div>
+                  <div style="font-size:11px;color:#938C84;">{{ diasRestantes(c.fecha_vencimiento) }}</div>
                 </td>
                 <td style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
                 <td>
@@ -125,7 +125,7 @@ type ModalMode = 'crear' | 'editar' | null;
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" style="text-align:center;padding:60px;color:#666;">
+                <td colspan="7" style="text-align:center;padding:60px;color:#938C84;">
                   No hay clientes. <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">Crear primer cliente</button>
                 </td>
               </tr>
@@ -145,7 +145,7 @@ type ModalMode = 'crear' | 'editar' | null;
           </div>
           <div class="modal__body">
             <form (ngSubmit)="guardarCliente()">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="two-column-grid">
 
                 <div class="form-group" style="grid-column:1/-1;">
                   <label class="form-label">Nombre Completo *</label>
@@ -239,9 +239,9 @@ type ModalMode = 'crear' | 'editar' | null;
           </div>
           <div class="modal__body">
             @if (historialLoading()) {
-              <div style="text-align:center;padding:40px;color:#666;">Cargando...</div>
+              <div style="text-align:center;padding:40px;color:#938C84;">Cargando...</div>
             } @else if (historial().length === 0) {
-              <div style="text-align:center;padding:40px;color:#666;">Sin pagos registrados.</div>
+              <div style="text-align:center;padding:40px;color:#938C84;">Sin pagos registrados.</div>
             } @else {
               <table class="data-table">
                 <thead>
@@ -251,7 +251,7 @@ type ModalMode = 'crear' | 'editar' | null;
                   @for (p of historial(); track p.id) {
                     <tr>
                       <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
-                      <td style="font-weight:600;color:#4caf50;">$ {{ p.monto }}</td>
+                      <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
                       <td><span class="badge badge--mensual">{{ p.metodo }}</span></td>
                       <td style="font-size:13px;">{{ p.banco || '—' }}</td>
                       <td><span class="badge badge--{{ p.estado?.toLowerCase() }}">{{ p.estado }}</span></td>
