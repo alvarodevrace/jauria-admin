@@ -1,14 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 import { AuthService } from '../../../core/auth/auth.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 
 @Component({
   selector: 'app-registro',
   standalone: true,
-  imports: [FormsModule, RouterLink, TablerIconComponent],
+  imports: [FormsModule, RouterLink, TablerIconsModule],
   template: `
     <div class="auth-page">
       <div class="auth-card">

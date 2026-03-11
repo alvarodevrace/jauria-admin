@@ -6,7 +6,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { PlanLabelPipe } from '../../shared/pipes/plan-label.pipe';
 import { environment } from '../../../environments/environment';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 
 interface Cliente {
   id_cliente: string;
@@ -37,7 +37,7 @@ type ModalMode = 'crear' | 'editar' | null;
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, PlanLabelPipe, TablerIconComponent],
+  imports: [CommonModule, FormsModule, DateEcPipe, PlanLabelPipe, TablerIconsModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Gestión</span>

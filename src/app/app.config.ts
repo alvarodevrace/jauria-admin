@@ -3,7 +3,7 @@ import { provideRouter, withViewTransitions, withRouterConfig } from '@angular/r
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import * as Sentry from '@sentry/angular';
-import { provideTablerIcons } from 'angular-tabler-icons';
+import { TablerIconsProvider } from 'angular-tabler-icons';
 import {
   IconAlertTriangle,
   IconBarbell,
@@ -36,7 +36,7 @@ const providers: ApplicationConfig['providers'] = [
   provideRouter(routes, withViewTransitions(), withRouterConfig({ onSameUrlNavigation: 'reload' })),
   provideHttpClient(withInterceptors([jwtInterceptor, httpErrorInterceptor])),
   provideAnimations(),
-  provideTablerIcons({
+  TablerIconsProvider.pick({
     IconAlertTriangle,
     IconBarbell,
     IconBolt,

@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -19,7 +19,7 @@ interface Lead {
 @Component({
   selector: 'app-leads',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconComponent],
+  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconsModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Landing Page</span>

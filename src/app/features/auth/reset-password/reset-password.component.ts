@@ -1,13 +1,13 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 import { SupabaseService } from '../../../core/services/supabase.service';
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [FormsModule, TablerIconComponent],
+  imports: [FormsModule, TablerIconsModule],
   template: `
     <div class="auth-page">
       <div class="auth-card">

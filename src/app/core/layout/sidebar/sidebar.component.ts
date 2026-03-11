@@ -3,13 +3,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, CommonModule, TablerIconComponent],
+  imports: [RouterLink, RouterLinkActive, CommonModule, TablerIconsModule],
   template: `
     <!-- Mobile overlay -->
     @if (mobileOpen()) {

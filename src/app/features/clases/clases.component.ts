@@ -6,7 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 import {
   format,
   startOfWeek,
@@ -46,7 +46,7 @@ type Vista = 'semana' | 'lista';
 @Component({
   selector: 'app-clases',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconComponent],
+  imports: [CommonModule, FormsModule, DateEcPipe, TablerIconsModule],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Calendario</span>

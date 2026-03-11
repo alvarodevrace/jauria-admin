@@ -1,12 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TablerIconComponent } from 'angular-tabler-icons';
+import { TablerIconsModule } from 'angular-tabler-icons';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-toast',
   standalone: true,
-  imports: [CommonModule, TablerIconComponent],
+  imports: [CommonModule, TablerIconsModule],
   template: `
     <div class="toast-container">
       @for (toast of toastService.toasts(); track toast.id) {
