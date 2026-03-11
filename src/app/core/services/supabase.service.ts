@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { processLock } from '@supabase/auth-js';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 import { SentryService } from './sentry.service';
@@ -7,13 +8,43 @@ import { SentryService } from './sentry.service';
 export class SupabaseService {
   readonly client: SupabaseClient;
   private sentry = inject(SentryService);
+  private readonly storageKey = 'jauria-admin-auth-v2';
+  private readonly legacyStorageKeys = ['jauria-admin-auth'];
 
   constructor() {
+    this.cleanupLegacyAuthStorage();
     this.client = createClient(
       environment.supabaseUrl,
       environment.supabaseAnonKey,
-      { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'jauria-admin-auth' } }
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          storageKey: this.storageKey,
+          lock: processLock,
+        },
+      }
     );
+  }
+
+  async clearLocalSession() {
+    await this.client.auth.signOut({ scope: 'local' });
+
+    if (typeof window === 'undefined') return;
+
+    window.localStorage.removeItem(this.storageKey);
+    window.localStorage.removeItem(`${this.storageKey}-code-verifier`);
+    window.localStorage.removeItem(`${this.storageKey}-user`);
+  }
+
+  private cleanupLegacyAuthStorage() {
+    if (typeof window === 'undefined') return;
+
+    for (const key of this.legacyStorageKeys) {
+      window.localStorage.removeItem(key);
+      window.localStorage.removeItem(`${key}-code-verifier`);
+      window.localStorage.removeItem(`${key}-user`);
+    }
   }
 
   // ── Helper con captura de errores ─────────────────────────────────────────

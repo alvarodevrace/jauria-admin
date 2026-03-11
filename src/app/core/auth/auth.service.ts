@@ -37,10 +37,19 @@ export class AuthService {
   ) { this.init(); }
 
   private async init() {
-    const { data } = await this.supabase.client.auth.getSession();
-    this._session.set(data.session);
-    if (data.session) await this.loadProfile(data.session.user);
-    this._loading.set(false);
+    try {
+      const { data } = await this.supabase.client.auth.getSession();
+      this._session.set(data.session);
+      if (data.session) await this.loadProfile(data.session.user);
+    } catch (error) {
+      if (this.isInvalidRefreshTokenError(error)) {
+        await this.resetLocalSession();
+      } else if (environment.sentryDsn) {
+        Sentry.captureException(error);
+      }
+    } finally {
+      this._loading.set(false);
+    }
 
     this.supabase.client.auth.onAuthStateChange(async (_, session) => {
       this._session.set(session);
@@ -51,6 +60,20 @@ export class AuthService {
         if (environment.sentryDsn) Sentry.setUser(null);
       }
     });
+  }
+
+  private async resetLocalSession() {
+    await this.supabase.clearLocalSession();
+    this._session.set(null);
+    this._profile.set(null);
+    if (environment.sentryDsn) Sentry.setUser(null);
+  }
+
+  private isInvalidRefreshTokenError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+
+    return error.message.includes('Invalid Refresh Token')
+      || error.message.includes('Refresh Token Not Found');
   }
 
   private async loadProfile(user: User) {
@@ -114,10 +137,7 @@ export class AuthService {
   }
 
   async logout() {
-    await this.supabase.client.auth.signOut();
-    this._session.set(null);
-    this._profile.set(null);
-    if (environment.sentryDsn) Sentry.setUser(null);
+    await this.resetLocalSession();
     this.router.navigate(['/auth/login']);
   }
 
