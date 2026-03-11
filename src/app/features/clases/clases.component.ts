@@ -14,9 +14,7 @@ import {
   addWeeks,
   subWeeks,
   isSameDay,
-  isWithinInterval,
   parseISO,
-  differenceInMinutes,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -41,6 +39,22 @@ interface Inscripcion {
   profiles?: { nombre_completo: string; avatar_url: string };
 }
 
+interface MiInscripcion {
+  id: number;
+  clase_id: number;
+  user_id: string;
+  estado: string;
+  clases?: {
+    id: number;
+    tipo: string;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    capacidad_maxima: number;
+    cancelada: boolean;
+  };
+}
+
 type Vista = 'semana' | 'lista';
 
 @Component({
@@ -62,13 +76,41 @@ type Vista = 'semana' | 'lista';
       </div>
     }
 
+    @if (!auth.isCoach()) {
+      <div class="clases-athlete-summary">
+        <div class="stat-card">
+          <div class="stat-card__label">Próxima clase inscrita</div>
+          @if (proximaClaseInscrita()) {
+            <div class="stat-card__value clases-athlete-summary__value">
+              {{ proximaClaseInscrita()!.tipo }}
+            </div>
+            <div class="stat-card__trend">
+              {{ proximaClaseInscrita()!.fecha | dateEc: 'EEEE dd/MM' }}
+              · {{ proximaClaseInscrita()!.hora_inicio }} – {{ proximaClaseInscrita()!.hora_fin }}
+            </div>
+          } @else {
+            <div class="clases-athlete-summary__empty">
+              No tienes clases futuras inscritas.
+            </div>
+          }
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Clases disponibles</div>
+          <div class="stat-card__value clases-athlete-summary__value">
+            {{ clasesDisponiblesParaInscripcion() }}
+          </div>
+          <div class="stat-card__trend">
+            Solo se muestran clases de hoy en adelante.
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Toolbar -->
-    <div
-      style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;"
-    >
+    <div class="toolbar-row" style="margin-bottom:20px;">
       <!-- Navegación de semana -->
       <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn btn--ghost btn--sm" (click)="semanaAnterior()">
+        <button class="btn btn--ghost btn--sm" (click)="semanaAnterior()" [disabled]="!puedeIrSemanaAnterior()">
           ‹
         </button>
         <span
@@ -116,7 +158,6 @@ type Vista = 'semana' | 'lista';
       <div class="week-calendar">
         <!-- Cabecera días -->
         <div class="week-calendar__header">
-          <div class="week-calendar__time-col"></div>
           @for (dia of diasSemana(); track dia.fecha) {
             <div class="week-calendar__day-header" [class.today]="dia.esHoy">
               <div class="week-calendar__day-name">{{ dia.nombre }}</div>
@@ -143,6 +184,12 @@ type Vista = 'semana' | 'lista';
                   @if (clase.descripcion) {
                     <div class="week-event__desc">{{ clase.descripcion }}</div>
                   }
+                  <div class="week-event__meta">
+                    <span>{{ inscritosCount(clase.id) }}/{{ clase.capacidad_maxima }}</span>
+                    @if (inscritoEn(clase.id)) {
+                      <span>Inscrito</span>
+                    }
+                  </div>
                   <div class="week-event__coach">
                     {{ clase.profiles?.nombre_completo ?? '—' }}
                   </div>
@@ -192,7 +239,7 @@ type Vista = 'semana' | 'lista';
               </tr>
             </thead>
             <tbody>
-              @for (c of clasesFiltradas(); track c.id) {
+              @for (c of clasesVisibles(); track c.id) {
                 <tr [class.row-cancelled]="c.cancelada">
                   <td>
                     <span
@@ -213,7 +260,7 @@ type Vista = 'semana' | 'lista';
                     {{ c.profiles?.nombre_completo ?? '—' }}
                   </td>
                   <td style="font-size:13px;">
-                    {{ c.capacidad_maxima }} personas
+                    {{ inscritosCount(c.id) }} / {{ c.capacidad_maxima }}
                   </td>
                   <td>
                     <div class="data-table__actions">
@@ -222,12 +269,10 @@ type Vista = 'semana' | 'lista';
                         (click)="inscribirseOCancelar(c)"
                         [disabled]="
                           loadingClase() === c.id ||
-                          (!inscritoEn(c.id) && !membresiaActiva())
+                          (!inscritoEn(c.id) && (!membresiaActiva() || !puedeInscribirse(c)))
                         "
                         [title]="
-                          !membresiaActiva() && !inscritoEn(c.id)
-                            ? 'Membresía no activa'
-                            : ''
+                          actionTitle(c)
                         "
                       >
                         {{ inscritoEn(c.id) ? 'Cancelar' : 'Inscribirse' }}
@@ -257,7 +302,7 @@ type Vista = 'semana' | 'lista';
                     colspan="6"
                     style="text-align:center;padding:40px;color:#666;"
                   >
-                    Sin clases esta semana.
+                    Sin clases disponibles hoy o en el futuro.
                   </td>
                 </tr>
               }
@@ -508,14 +553,24 @@ type Vista = 'semana' | 'lista';
         overflow: hidden;
         overflow-x: auto;
       }
+      .clases-athlete-summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .clases-athlete-summary__value {
+        font-size: 28px;
+      }
+      .clases-athlete-summary__empty {
+        color: #938c84;
+        font-size: 14px;
+        line-height: 1.4;
+      }
       .week-calendar__header {
         display: grid;
-        grid-template-columns: 60px repeat(7, 1fr);
+        grid-template-columns: repeat(7, minmax(140px, 1fr));
         border-bottom: 1px solid #2a2a2a;
-      }
-      .week-calendar__time-col {
-        padding: 12px 8px;
-        border-right: 1px solid #1e1e1e;
       }
       .week-calendar__day-header {
         padding: 12px 8px;
@@ -545,7 +600,7 @@ type Vista = 'semana' | 'lista';
       }
       .week-calendar__body {
         display: grid;
-        grid-template-columns: repeat(7, 1fr);
+        grid-template-columns: repeat(7, minmax(140px, 1fr));
         min-height: 200px;
       }
       .week-calendar__col {
@@ -600,6 +655,18 @@ type Vista = 'semana' | 'lista';
         opacity: 0.5;
         margin-top: 4px;
       }
+      .week-event__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
       .week-event--wod {
         background: rgba(183, 28, 28, 0.25);
         border-left: 3px solid #b71c1c;
@@ -620,6 +687,11 @@ type Vista = 'semana' | 'lista';
         opacity: 0.5;
         text-decoration: line-through;
       }
+      @media (max-width: 900px) {
+        .clases-athlete-summary {
+          grid-template-columns: 1fr;
+        }
+      }
     `,
   ],
 })
@@ -632,6 +704,8 @@ export class ClasesComponent implements OnInit {
   clases = signal<Clase[]>([]);
   inscritos = signal<Inscripcion[]>([]);
   misInscritas = signal<number[]>([]);
+  misInscripcionesDetalle = signal<MiInscripcion[]>([]);
+  inscritosPorClase = signal<Record<number, number>>({});
 
   // Estado de membresía del atleta logueado
   membresiaActiva = signal<boolean | null>(null); // null = cargando
@@ -674,6 +748,29 @@ export class ClasesComponent implements OnInit {
     return this.clases().filter((clase) => clase.tipo === tipo);
   });
 
+  clasesVisibles = computed(() =>
+    this.clasesFiltradas().filter((clase) => this.esClaseVisible(clase)),
+  );
+
+  proximaClaseInscrita = computed(() => {
+    const proximas = this.misInscripcionesDetalle()
+      .map((inscripcion) => inscripcion.clases)
+      .filter((clase): clase is NonNullable<MiInscripcion['clases']> =>
+        Boolean(clase && !clase.cancelada && this.esClaseVisible(clase)),
+      )
+      .sort((a, b) => this.claseStart(a).getTime() - this.claseStart(b).getTime());
+
+    return proximas[0] ?? null;
+  });
+
+  clasesDisponiblesParaInscripcion = computed(
+    () =>
+      this.clasesVisibles().filter(
+        (clase) =>
+          !this.inscritoEn(clase.id) && this.puedeInscribirse(clase),
+      ).length,
+  );
+
   newClase = this.emptyClase();
 
   async ngOnInit() {
@@ -711,24 +808,35 @@ export class ClasesComponent implements OnInit {
   }
 
   semanaAnterior() {
+    if (!this.puedeIrSemanaAnterior()) return;
     this.semanaBase.update((d) => subWeeks(d, 1));
-    this.cargarClases();
+    void this.cargarClases();
   }
   semanaSiguiente() {
     this.semanaBase.update((d) => addWeeks(d, 1));
-    this.cargarClases();
+    void this.cargarClases();
   }
   irHoy() {
     this.semanaBase.set(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    this.cargarClases();
+    void this.cargarClases();
   }
 
   async cargarClases() {
     this.loading.set(true);
     const lunes = format(this.semanaBase(), 'yyyy-MM-dd');
     const domingo = format(addDays(this.semanaBase(), 6), 'yyyy-MM-dd');
+    const hoy = format(new Date(), 'yyyy-MM-dd');
+    const fechaInicio = lunes < hoy ? hoy : lunes;
+
+    if (fechaInicio > domingo) {
+      this.clases.set([]);
+      this.inscritosPorClase.set({});
+      this.loading.set(false);
+      return;
+    }
+
     const { data, error } = await this.supabase.getClases({
-      semana: `${lunes},${domingo}`,
+      semana: `${fechaInicio},${domingo}`,
     });
     this.loading.set(false);
     if (error) {
@@ -739,7 +847,9 @@ export class ClasesComponent implements OnInit {
       this.toast.error('Error cargando clases');
       return;
     }
-    this.clases.set((data ?? []) as unknown as Clase[]);
+    const clases = (data ?? []) as unknown as Clase[];
+    this.clases.set(clases);
+    await this.cargarResumenInscritos(clases);
   }
 
   onFilterTipoChange(tipo: string) {
@@ -750,19 +860,74 @@ export class ClasesComponent implements OnInit {
     const userId = this.auth.currentUser()?.id;
     if (!userId) return;
     const { data } = await this.supabase.getInscripcionesByUser(userId);
-    this.misInscritas.set(
-      ((data ?? []) as Record<string, unknown>[]).map(
-        (i) => i['clase_id'] as number,
+    const inscripciones = (data ?? []) as unknown as MiInscripcion[];
+    const futuras = inscripciones.filter((inscripcion) =>
+      Boolean(
+        inscripcion.clases &&
+        !inscripcion.clases.cancelada &&
+        this.esClaseVisible(inscripcion.clases),
       ),
     );
+
+    this.misInscripcionesDetalle.set(futuras);
+    this.misInscritas.set(futuras.map((inscripcion) => inscripcion.clase_id));
   }
 
   clasesDelDia(fecha: string): Clase[] {
-    return this.clasesFiltradas().filter((c) => c.fecha === fecha);
+    return this.clasesVisibles().filter((c) => c.fecha === fecha);
   }
 
   inscritoEn(claseId: number): boolean {
     return this.misInscritas().includes(claseId);
+  }
+
+  inscritosCount(claseId: number): number {
+    return this.inscritosPorClase()[claseId] ?? 0;
+  }
+
+  puedeIrSemanaAnterior(): boolean {
+    return this.semanaBase().getTime() > startOfWeek(new Date(), { weekStartsOn: 1 }).getTime();
+  }
+
+  puedeInscribirse(clase: Clase): boolean {
+    return this.claseStart(clase).getTime() > Date.now();
+  }
+
+  actionTitle(clase: Clase): string {
+    if (this.inscritoEn(clase.id)) return 'Cancelar inscripción';
+    if (this.membresiaActiva() === null) return 'Verificando membresía';
+    if (this.membresiaActiva() === false) return 'Membresía no activa';
+    if (!this.puedeInscribirse(clase)) return 'La clase ya comenzó o ya pasó';
+    if (this.inscritosCount(clase.id) >= clase.capacidad_maxima) return 'Clase sin cupos';
+    return 'Inscribirse';
+  }
+
+  esClaseVisible(clase: Pick<Clase, 'fecha' | 'hora_inicio'>): boolean {
+    return this.claseStart(clase).getTime() > Date.now();
+  }
+
+  private claseStart(clase: Pick<Clase, 'fecha' | 'hora_inicio'>): Date {
+    return parseISO(`${clase.fecha}T${clase.hora_inicio}`);
+  }
+
+  private async cargarResumenInscritos(clases: Clase[]) {
+    const ids = clases.map((clase) => clase.id);
+    const { data, error } = await this.supabase.getInscripcionesResumen(ids);
+
+    if (error) {
+      this.sentry.captureError(error, { action: 'cargarResumenInscritos' });
+      return;
+    }
+
+    const resumen = ((data ?? []) as Array<{ clase_id: number }>).reduce<Record<number, number>>(
+      (acc, item) => {
+        acc[item.clase_id] = (acc[item.clase_id] ?? 0) + 1;
+        return acc;
+      },
+      {},
+    );
+
+    this.inscritosPorClase.set(resumen);
   }
 
   abrirFormClase() {
@@ -806,6 +971,11 @@ export class ClasesComponent implements OnInit {
       return;
     }
 
+    if (!this.inscritoEn(clase.id) && !this.puedeInscribirse(clase)) {
+      this.toast.warning('No puedes inscribirte a una clase que ya comenzó o ya pasó.');
+      return;
+    }
+
     // Verificar membresía activa antes de inscribirse (no aplica al cancelar)
     if (!this.inscritoEn(clase.id) && !this.membresiaActiva()) {
       if (this.membresiaActiva() === false) {
@@ -824,7 +994,6 @@ export class ClasesComponent implements OnInit {
 
     if (this.inscritoEn(clase.id)) {
       await this.supabase.cancelarInscripcion(clase.id, userId);
-      this.misInscritas.update((ids) => ids.filter((id) => id !== clase.id));
       this.toast.info('Inscripción cancelada');
     } else {
       // Verificar cupos disponibles
@@ -843,7 +1012,6 @@ export class ClasesComponent implements OnInit {
       } else if (error) {
         this.toast.error(error.message);
       } else {
-        this.misInscritas.update((ids) => [...ids, clase.id]);
         this.toast.success('¡Inscripción confirmada!');
         this.sentry.addBreadcrumb(
           `Inscripción clase ${clase.tipo} ${clase.fecha}`,
@@ -853,6 +1021,7 @@ export class ClasesComponent implements OnInit {
     }
 
     this.loadingClase.set(null);
+    await Promise.all([this.cargarMisInscripciones(), this.cargarClases()]);
     // Refrescar inscritos si hay modal abierto
     if (this.claseSeleccionada()?.id === clase.id) await this.verClase(clase);
   }

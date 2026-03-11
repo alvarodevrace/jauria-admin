@@ -151,6 +151,16 @@ export class SupabaseService {
     return query;
   }
 
+  async getClasesDesde(fechaDesde: string) {
+    return this.client
+      .from('clases')
+      .select('*, profiles(nombre_completo)')
+      .eq('cancelada', false)
+      .gte('fecha', fechaDesde)
+      .order('fecha')
+      .order('hora_inicio');
+  }
+
   async createClase(data: Record<string, unknown>) {
     const result = await this.client.from('clases').insert(data).select().single();
     if (result.error) this.sentry.captureError(result.error, { action: 'createClase' });
@@ -180,9 +190,20 @@ export class SupabaseService {
       .neq('estado', 'cancelado');
   }
 
+  async getInscripcionesResumen(claseIds: number[]) {
+    if (claseIds.length === 0) {
+      return { data: [], error: null };
+    }
+
+    return this.client.from('inscripciones')
+      .select('clase_id, estado')
+      .in('clase_id', claseIds)
+      .neq('estado', 'cancelado');
+  }
+
   async getInscripcionesByUser(userId: string) {
     return this.client.from('inscripciones')
-      .select('*, clases(id, tipo, fecha, hora_inicio, hora_fin, capacidad_maxima)')
+      .select('*, clases(id, tipo, fecha, hora_inicio, hora_fin, capacidad_maxima, cancelada)')
       .eq('user_id', userId)
       .neq('estado', 'cancelado')
       .order('created_at', { ascending: false });

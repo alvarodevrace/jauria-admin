@@ -6,12 +6,31 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { PlanLabelPipe } from '../../shared/pipes/plan-label.pipe';
+import { parseISO } from 'date-fns';
 
 interface ClientePlan {
   estado: string;
   plan: string;
   monto_plan: number;
   fecha_vencimiento: string;
+}
+
+interface MiInscripcion {
+  clase_id: number;
+  clases?: {
+    tipo: string;
+    fecha: string;
+    hora_inicio: string;
+    hora_fin: string;
+    cancelada: boolean;
+  };
+}
+
+interface ClaseDisponible {
+  id: number;
+  fecha: string;
+  hora_inicio: string;
+  cancelada: boolean;
 }
 
 @Component({
@@ -82,6 +101,31 @@ interface ClientePlan {
                 {{ cliente()!.fecha_vencimiento | dateEc }}
               </div>
             </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Próxima Clase</div>
+              @if (proximaClase()) {
+                <div style="font-size:18px;color:#fff;margin-top:4px;">
+                  {{ proximaClase()!.tipo }}
+                </div>
+                <div style="font-size:13px;color:#938C84;margin-top:6px;">
+                  {{ proximaClase()!.fecha | dateEc: 'EEEE dd/MM' }}
+                  · {{ proximaClase()!.hora_inicio }} – {{ proximaClase()!.hora_fin }}
+                </div>
+              } @else {
+                <div style="font-size:14px;color:#938C84;margin-top:4px;">
+                  No tienes clases futuras inscritas.
+                </div>
+              }
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Clases Disponibles</div>
+              <div style="font-size:18px;color:#fff;margin-top:4px;">
+                {{ clasesDisponibles() }}
+              </div>
+              <div style="font-size:13px;color:#938C84;margin-top:6px;">
+                Próximas clases a las que aún puedes inscribirte.
+              </div>
+            </div>
           </div>
         </div>
       }
@@ -102,6 +146,8 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
   saving = signal(false);
   perfilMsg = signal('');
   cliente = signal<ClientePlan | null>(null);
+  proximaClase = signal<NonNullable<MiInscripcion['clases']> | null>(null);
+  clasesDisponibles = signal(0);
   private perfilMsgTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   async ngOnInit() {
@@ -111,6 +157,45 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
     if (idCliente) {
       const { data } = await this.supabase.getCliente(idCliente);
       this.cliente.set(data as ClientePlan);
+    }
+
+    const userId = this.auth.currentUser()?.id;
+    if (userId && this.auth.rol() === 'atleta') {
+      const [inscripcionesRes, clasesRes] = await Promise.all([
+        this.supabase.getInscripcionesByUser(userId),
+        this.supabase.getClasesDesde(new Date().toISOString().slice(0, 10)),
+      ]);
+
+      const inscripciones = ((inscripcionesRes.data ?? []) as unknown as MiInscripcion[])
+        .filter((inscripcion) =>
+          Boolean(
+            inscripcion.clases &&
+            !inscripcion.clases.cancelada &&
+            parseISO(`${inscripcion.clases.fecha}T${inscripcion.clases.hora_inicio}`).getTime() > Date.now(),
+          ),
+        );
+
+      const proxima = inscripciones
+        .map((inscripcion) => inscripcion.clases)
+        .filter((clase): clase is NonNullable<MiInscripcion['clases']> => Boolean(clase))
+        .sort(
+          (a, b) =>
+            parseISO(`${a.fecha}T${a.hora_inicio}`).getTime()
+            - parseISO(`${b.fecha}T${b.hora_inicio}`).getTime(),
+        )[0] ?? null;
+
+      this.proximaClase.set(proxima);
+
+      const inscritosIds = new Set(inscripciones.map((inscripcion) => inscripcion.clase_id));
+      const disponibles = ((clasesRes.data ?? []) as unknown as ClaseDisponible[])
+        .filter(
+          (clase) =>
+            !clase.cancelada
+            && parseISO(`${clase.fecha}T${clase.hora_inicio}`).getTime() > Date.now()
+            && !inscritosIds.has(clase.id),
+        ).length;
+
+      this.clasesDisponibles.set(disponibles);
     }
   }
 
