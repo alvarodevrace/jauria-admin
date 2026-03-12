@@ -53,8 +53,13 @@ import { AuthService } from '../../auth/auth.service';
         }
 
         <!-- Coach + Admin -->
-        @if (auth.isCoach()) {
-          <span class="sidebar__section-label">Gestión</span>
+        @if (auth.canManageBusinessOperations()) {
+          <span class="sidebar__section-label">Operación</span>
+
+          <a class="sidebar__item" routerLink="/app/dashboard" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="chart-bar" />
+            <span>Dashboard</span>
+          </a>
 
           <a class="sidebar__item" routerLink="/app/clientes" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="users" />
@@ -66,11 +71,6 @@ import { AuthService } from '../../auth/auth.service';
             <span>Pagos</span>
           </a>
 
-          <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
-            <i-lucide class="sidebar__item-icon" name="settings-2" />
-            <span>Configuración</span>
-          </a>
-
           <a class="sidebar__item" routerLink="/app/eventos-noticias" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="mail" />
             <span>Eventos y Noticias</span>
@@ -78,13 +78,8 @@ import { AuthService } from '../../auth/auth.service';
         }
 
         <!-- Admin only -->
-        @if (auth.isAdmin()) {
+        @if (auth.canManageInfrastructure()) {
           <span class="sidebar__section-label">Sistema</span>
-
-          <a class="sidebar__item" routerLink="/app/dashboard" routerLinkActive="active" (click)="close()">
-            <i-lucide class="sidebar__item-icon" name="chart-bar" />
-            <span>Dashboard</span>
-          </a>
 
           <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="clipboard" />
@@ -99,6 +94,11 @@ import { AuthService } from '../../auth/auth.service';
           <a class="sidebar__item" routerLink="/app/workflows" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="bolt" />
             <span>Workflows n8n</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="settings-2" />
+            <span>Configuración del Sistema</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">

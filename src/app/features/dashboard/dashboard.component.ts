@@ -4,6 +4,7 @@ import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { AdminOpsService } from '../../core/services/admin-ops.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 Chart.register(...registerables);
 
@@ -29,8 +30,13 @@ const BRAND_CHART = {
   imports: [CommonModule],
   template: `
     <div class="page-header">
-      <span class="page-header__eyebrow">Sistema</span>
+      <span class="page-header__eyebrow">{{ auth.canViewTechnicalDashboard() ? 'Sistema' : 'Operación' }}</span>
       <h2 class="page-header__title">Dashboard</h2>
+      <p class="page-header__subtitle">
+        {{ auth.canViewTechnicalDashboard()
+          ? 'Control operativo del box y salud técnica del sistema.'
+          : 'Resumen operativo del box para seguimiento diario del coach.' }}
+      </p>
     </div>
 
     <div class="dashboard-kpis stats-grid">
@@ -67,53 +73,55 @@ const BRAND_CHART = {
       </div>
     </div>
 
-    <div class="bottom-grid dashboard-grid">
-      <div class="data-table-wrapper">
-        <div class="data-table-wrapper__header">
-          <span class="data-table-wrapper__title">Estado de Servicios</span>
-          <button class="btn btn--ghost btn--sm" (click)="refreshStatus()">↻</button>
-        </div>
-        <div class="dashboard-status-body">
-          <div class="service-card">
-            <div>
-              <div class="service-card__name">n8n</div>
-              <div class="service-card__detail">{{ wfCount() }} workflows activos</div>
-            </div>
-            <div class="status-indicator" [class]="'status-indicator--' + n8nStatus()">
-              <div class="dot"></div>{{ statusLabel(n8nStatus()) }}
-            </div>
+    <div class="bottom-grid dashboard-grid" [class.dashboard-grid--single]="!auth.canViewTechnicalDashboard()">
+      @if (auth.canViewTechnicalDashboard()) {
+        <div class="data-table-wrapper">
+          <div class="data-table-wrapper__header">
+            <span class="data-table-wrapper__title">Estado de Servicios</span>
+            <button class="btn btn--ghost btn--sm" (click)="refreshStatus()">↻</button>
           </div>
-
-          <div class="service-card">
-            <div>
-              <div class="service-card__name">WhatsApp · jauriaCrossfit</div>
-              <div class="service-card__detail">Evolution API</div>
-            </div>
-            <div class="dashboard-service-actions">
-              <div class="status-indicator" [class]="'status-indicator--' + waStatus()">
-                <div class="dot"></div>{{ statusLabel(waStatus()) }}
+          <div class="dashboard-status-body">
+            <div class="service-card">
+              <div>
+                <div class="service-card__name">n8n</div>
+                <div class="service-card__detail">{{ wfCount() }} workflows activos</div>
               </div>
-              @if (waStatus() !== 'online') {
-                <button class="btn btn--ghost btn--sm" (click)="reconectarWA()">Reconectar</button>
-              }
+              <div class="status-indicator" [class]="'status-indicator--' + n8nStatus()">
+                <div class="dot"></div>{{ statusLabel(n8nStatus()) }}
+              </div>
             </div>
-          </div>
 
-          <div class="service-card">
-            <div>
-              <div class="service-card__name">Supabase</div>
-              <div class="service-card__detail">PostgreSQL 17.6 · us-east-1</div>
+            <div class="service-card">
+              <div>
+                <div class="service-card__name">WhatsApp · jauriaCrossfit</div>
+                <div class="service-card__detail">Evolution API</div>
+              </div>
+              <div class="dashboard-service-actions">
+                <div class="status-indicator" [class]="'status-indicator--' + waStatus()">
+                  <div class="dot"></div>{{ statusLabel(waStatus()) }}
+                </div>
+                @if (waStatus() !== 'online') {
+                  <button class="btn btn--ghost btn--sm" (click)="reconectarWA()">Reconectar</button>
+                }
+              </div>
             </div>
-            <div class="status-indicator status-indicator--online">
-              <div class="dot"></div>Healthy
+
+            <div class="service-card">
+              <div>
+                <div class="service-card__name">Supabase</div>
+                <div class="service-card__detail">PostgreSQL 17.6 · us-east-1</div>
+              </div>
+              <div class="status-indicator status-indicator--online">
+                <div class="dot"></div>Healthy
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      }
 
       <div class="data-table-wrapper">
         <div class="data-table-wrapper__header">
-          <span class="data-table-wrapper__title">Alertas Activas</span>
+          <span class="data-table-wrapper__title">{{ auth.canViewTechnicalDashboard() ? 'Alertas Activas' : 'Alertas Operativas' }}</span>
         </div>
         <div class="dashboard-alerts-body">
           @if (alertas().length === 0) {
@@ -144,6 +152,10 @@ const BRAND_CHART = {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 24px;
+    }
+
+    .dashboard-grid--single {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .charts-grid {
@@ -209,6 +221,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private supabase = inject(SupabaseService);
   private adminOps = inject(AdminOpsService);
   private toast    = inject(ToastService);
+  protected auth   = inject(AuthService);
 
   kpis      = signal<KPI[]>([]);
   alertas   = signal<Alerta[]>([]);
@@ -220,7 +233,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private donutChartInstance?: Chart;
   private chartsInitTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  ngOnInit()        { this.loadData(); this.refreshStatus(); }
+  ngOnInit()        { this.loadData(); if (this.auth.canViewTechnicalDashboard()) this.refreshStatus(); }
   ngAfterViewInit() { /* charts se crean después de loadData */ }
 
   ngOnDestroy() {
@@ -233,8 +246,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     const [clientes, pagos, convs, leads] = await Promise.all([
       this.supabase.getClientes(),
       this.supabase.getHistorialPagos(),
-      this.supabase.getConversacionesActivas(),
-      this.supabase.getLeads(),
+      this.auth.canViewTechnicalDashboard() ? this.supabase.getConversacionesActivas() : Promise.resolve({ data: [], error: null }),
+      this.auth.canViewLeadInbox() ? this.supabase.getLeads() : Promise.resolve({ data: [], error: null }),
     ]);
 
     const cd = (clientes.data ?? []) as Record<string, unknown>[];
@@ -247,19 +260,29 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     const total = cd.length;
     const tasaPago = total ? Math.round(activos / total * 100) : 0;
     const totalCobrado = pd.reduce((s, p) => s + Number(p['monto'] ?? 0), 0);
+    const pagosPendientes = pd.filter((p) => String(p['estado'] ?? '').toLowerCase() !== 'completado').length;
 
-    this.kpis.set([
-      { label: 'Clientes Activos',  value: activos,              trend: `${total} total`,         trendUp: true },
-      { label: 'Total Cobrado',     value: `$${totalCobrado.toFixed(0)}`, trend: `${pd.length} pagos`,  trendUp: true },
-      { label: 'Tasa de Pago',      value: `${tasaPago}%`,       trend: tasaPago >= 70 ? 'Saludable' : 'Revisar',  trendUp: tasaPago >= 70 },
-      { label: 'Conv. Activas WA',  value: cvd.length },
-      { label: 'Leads Landing',     value: ld.length },
-    ]);
+    const kpis: KPI[] = [
+      { label: 'Clientes Activos', value: activos, trend: `${total} total`, trendUp: true },
+      { label: 'Total Cobrado', value: `$${totalCobrado.toFixed(0)}`, trend: `${pd.length} pagos`, trendUp: true },
+      { label: 'Tasa de Pago', value: `${tasaPago}%`, trend: tasaPago >= 70 ? 'Saludable' : 'Revisar', trendUp: tasaPago >= 70 },
+      { label: 'Pagos Pendientes', value: pagosPendientes, trend: pagosPendientes === 0 ? 'Al día' : 'Revisar cobros', trendUp: pagosPendientes === 0 },
+      { label: 'Clientes Vencidos', value: vencidos, trend: vencidos === 0 ? 'Sin alertas' : 'Seguimiento requerido', trendUp: vencidos === 0 },
+    ];
+
+    if (this.auth.canViewLeadInbox()) {
+      kpis.push({ label: 'Leads Landing', value: ld.length });
+    }
+
+    this.kpis.set(kpis);
 
     // Alertas
     const alerts: Alerta[] = [];
     if (vencidos > 0) alerts.push({ tipo: 'warning', titulo: 'Clientes Vencidos', msg: `${vencidos} con membresía vencida` });
-    if (cvd.length > 0) alerts.push({ tipo: 'info', titulo: 'Conversaciones WA', msg: `${cvd.length} conversación(es) esperando respuesta` });
+    if (pagosPendientes > 0) alerts.push({ tipo: 'info', titulo: 'Pagos Pendientes', msg: `${pagosPendientes} pago(s) requieren revisión` });
+    if (this.auth.canViewTechnicalDashboard() && cvd.length > 0) {
+      alerts.push({ tipo: 'info', titulo: 'Conversaciones WA', msg: `${cvd.length} conversación(es) esperando respuesta` });
+    }
     this.alertas.set(alerts);
 
     // Charts después del DOM
@@ -362,6 +385,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   refreshStatus() {
+    if (!this.auth.canViewTechnicalDashboard()) return;
+
     this.n8nStatus.set('checking');
     this.waStatus.set('checking');
 
@@ -392,6 +417,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   reconectarWA() {
+    if (!this.auth.canManageInfrastructure()) return;
+
     this.adminOps.connectWhatsApp().subscribe({
       next: res => { if (res?.code) this.toast.info('Escanea el QR desde WhatsApp para reconectar.'); },
       error: () => this.toast.error('No se pudo reconectar la instancia de WhatsApp'),

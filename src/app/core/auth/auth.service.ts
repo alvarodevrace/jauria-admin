@@ -30,6 +30,14 @@ export class AuthService {
   readonly rol             = computed(() => this._profile()?.rol ?? null);
   readonly isAdmin         = computed(() => this._profile()?.rol === 'admin');
   readonly isCoach         = computed(() => ['coach', 'admin'].includes(this._profile()?.rol ?? ''));
+  readonly canViewOperationalDashboard = computed(() => ['coach', 'admin'].includes(this._profile()?.rol ?? ''));
+  readonly canViewTechnicalDashboard = computed(() => this._profile()?.rol === 'admin');
+  readonly canManageBusinessOperations = computed(() => ['coach', 'admin'].includes(this._profile()?.rol ?? ''));
+  readonly canManageInfrastructure = computed(() => this._profile()?.rol === 'admin');
+  readonly canViewLeadInbox = computed(() => this._profile()?.rol === 'admin');
+  readonly canViewWhatsappOperations = computed(() => this._profile()?.rol === 'admin');
+  readonly canViewWorkflowOperations = computed(() => this._profile()?.rol === 'admin');
+  readonly canManageRoles = computed(() => this._profile()?.rol === 'admin');
 
   constructor(
     private supabase: SupabaseService,

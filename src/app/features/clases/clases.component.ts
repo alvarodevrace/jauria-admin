@@ -481,7 +481,7 @@ const CLASE_THEME = {
                     @for (chip of newClase.wod_plan.warmup; track chip.label + $index) {
                       <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('warmup', $index)">
                         <span>{{ chip.label }}</span>
-                        <i-lucide name="x" />
+                        <i-lucide name="circle-x" />
                       </button>
                     } @empty {
                       <div class="wod-empty-copy">Sin calentamiento cargado.</div>
@@ -511,7 +511,7 @@ const CLASE_THEME = {
                     @for (chip of newClase.wod_plan.accessories; track chip.label + $index) {
                       <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('accessories', $index)">
                         <span>{{ chip.label }}</span>
-                        <i-lucide name="x" />
+                        <i-lucide name="circle-x" />
                       </button>
                     } @empty {
                       <div class="wod-empty-copy">Sin accesorios cargados.</div>
@@ -541,7 +541,7 @@ const CLASE_THEME = {
                     @for (chip of newClase.wod_plan.main.items; track chip.label + $index) {
                       <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('main', $index)">
                         <span>{{ chip.label }}</span>
-                        <i-lucide name="x" />
+                        <i-lucide name="circle-x" />
                       </button>
                     } @empty {
                       <div class="wod-empty-copy">Agrega al menos un bloque al WOD central.</div>

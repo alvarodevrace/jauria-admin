@@ -18,8 +18,11 @@ export const roleGuard: CanActivateFn = async (route: ActivatedRouteSnapshot) =>
   const userRol = auth.rol();
 
   if (!userRol || !requiredRoles.includes(userRol)) {
-    // Redirect to their home based on role
-    const fallback = userRol ? '/app/clases' : '/auth/login';
+    const fallback = !userRol
+      ? '/auth/login'
+      : userRol === 'atleta'
+        ? '/app/novedades'
+        : '/app/dashboard';
     router.navigate([fallback]);
     return false;
   }

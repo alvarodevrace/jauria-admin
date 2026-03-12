@@ -20,7 +20,7 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
-        canActivate: [roleGuard], data: { roles: ['admin'] },
+        canActivate: [roleGuard], data: { roles: ['coach', 'admin'] },
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
       {
@@ -49,7 +49,7 @@ export const routes: Routes = [
       },
       {
         path: 'configuracion',
-        canActivate: [roleGuard], data: { roles: ['coach', 'admin'] },
+        canActivate: [roleGuard], data: { roles: ['admin'] },
         loadComponent: () => import('./features/configuracion/configuracion.component').then(m => m.ConfiguracionComponent),
       },
       {
