@@ -31,7 +31,7 @@ import { AuthService } from '../../auth/auth.service';
         <span class="sidebar__section-label">General</span>
 
         <a class="sidebar__item" routerLink="/app/novedades" routerLinkActive="active" (click)="close()">
-          <i-lucide class="sidebar__item-icon" name="megaphone" />
+          <i-lucide class="sidebar__item-icon" name="calendar-days" />
           <span>Novedades</span>
         </a>
 
