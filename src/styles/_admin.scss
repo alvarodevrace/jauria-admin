@@ -569,6 +569,18 @@ $topbar-height: 64px;
     padding: 8px;
     width: 36px;
     height: 36px;
+    min-width: 36px;
+  }
+
+  &--icon-clean {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      background: rgba(v.$color-white, 0.06);
+      border-color: transparent;
+    }
   }
 
   &:disabled {

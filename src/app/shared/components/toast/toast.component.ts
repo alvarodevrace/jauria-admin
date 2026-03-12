@@ -20,7 +20,7 @@ import { ToastService } from '../../../core/services/toast.service';
             }
           </span>
           <span class="toast__message">{{ toast.message }}</span>
-          <button class="toast__close btn btn--icon btn--ghost" (click)="toastService.remove(toast.id)">
+          <button class="toast__close btn btn--icon btn--ghost btn--icon-clean" (click)="toastService.remove(toast.id)" aria-label="Cerrar notificación">
             <i-lucide name="circle-x" />
           </button>
         </div>

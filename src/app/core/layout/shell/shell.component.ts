@@ -2,12 +2,13 @@ import { Component, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
+import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 import { ToastComponent } from '../../../shared/components/toast/toast.component';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent, ToastComponent],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, ToastComponent, ConfirmModalComponent],
   template: `
     <div class="admin-shell">
       <app-sidebar #sidebar />
@@ -20,6 +21,7 @@ import { ToastComponent } from '../../../shared/components/toast/toast.component
         </main>
       </div>
       <app-toast />
+      <app-confirm-modal />
     </div>
   `,
   styles: [`

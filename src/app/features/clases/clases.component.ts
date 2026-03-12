@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -811,6 +812,7 @@ const CLASE_THEME = {
 export class ClasesComponent implements OnInit {
   auth = inject(AuthService);
   private supabase = inject(SupabaseService);
+  private confirmDialog = inject(ConfirmDialogService);
   private toast = inject(ToastService);
   private sentry = inject(SentryService);
 
@@ -1208,9 +1210,13 @@ export class ClasesComponent implements OnInit {
   }
 
   async eliminarClase(clase: Clase) {
-    const confirmacion = window.confirm(
-      `Eliminar "${clase.tipo}" del ${clase.fecha} a las ${clase.hora_inicio}. Esta acción quitará también sus inscripciones.`,
-    );
+    const confirmacion = await this.confirmDialog.open({
+      title: 'Eliminar clase',
+      message: `Se eliminará "${clase.tipo}" del ${clase.fecha} a las ${clase.hora_inicio}. También se quitarán sus inscripciones.`,
+      confirmLabel: 'Sí, eliminar',
+      cancelLabel: 'No, cancelar',
+      tone: 'danger',
+    });
 
     if (!confirmacion) return;
 

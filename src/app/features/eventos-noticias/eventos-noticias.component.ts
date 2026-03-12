@@ -10,6 +10,7 @@ import {
   EstadoPublicacion,
   EventoModalidad,
 } from '../../core/models/contenido-box.model';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -159,7 +160,7 @@ interface ContenidoFormState {
                 <td>{{ item.profiles?.nombre_completo ?? '—' }}</td>
                 <td>
                   <div class="data-table__actions editorial-actions">
-                    <button class="btn btn--ghost btn--sm btn--icon" (click)="previewItem(item)" title="Vista previa">
+                    <button class="btn btn--ghost btn--sm btn--icon btn--icon-clean" (click)="previewItem(item)" title="Vista previa" aria-label="Vista previa">
                       <i-lucide name="eye" />
                     </button>
                     <button class="btn btn--ghost btn--sm" (click)="openEditModal(item)">
@@ -193,7 +194,7 @@ interface ContenidoFormState {
         <div class="modal modal--wide editorial-modal" (click)="$event.stopPropagation()">
           <div class="modal__header">
             <h3 class="modal__title">{{ form().id ? 'Editar contenido' : 'Nuevo contenido' }}</h3>
-            <button class="btn btn--ghost btn--icon" (click)="closeEditorModal()">
+            <button class="btn btn--ghost btn--icon btn--icon-clean" (click)="closeEditorModal()" aria-label="Cerrar editor">
               <i-lucide name="x" />
             </button>
           </div>
@@ -232,6 +233,15 @@ interface ContenidoFormState {
               <div class="form-group editorial-form-group--full">
                 <label class="form-label">Foto *</label>
                 <input class="form-control" type="file" accept="image/png,image/jpeg,image/webp" (change)="onFileSelected($event)" />
+                <div class="editorial-image-hint">
+                  @if (selectedFile()) {
+                    Nueva imagen: {{ selectedFile()!.name }}
+                  } @else if (form().imagen_path) {
+                    Imagen actual cargada. Sube otra solo si quieres reemplazarla.
+                  } @else {
+                    Selecciona una imagen para publicar el contenido.
+                  }
+                </div>
                 @if (imagePreview()) {
                   <img class="editorial-image-preview" [src]="imagePreview()!" alt="Vista previa" />
                 }
@@ -288,7 +298,7 @@ interface ContenidoFormState {
         <div class="modal modal--wide editorial-preview-modal" (click)="$event.stopPropagation()">
           <div class="modal__header">
             <h3 class="modal__title">{{ previewSelected()!.titulo }}</h3>
-            <button class="btn btn--ghost btn--icon" (click)="previewSelected.set(null)">
+            <button class="btn btn--ghost btn--icon btn--icon-clean" (click)="previewSelected.set(null)" aria-label="Cerrar vista previa">
               <i-lucide name="x" />
             </button>
           </div>
@@ -397,6 +407,13 @@ interface ContenidoFormState {
       background: #1d2022;
     }
 
+    .editorial-image-hint {
+      margin-top: 10px;
+      color: #938c84;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
     .editorial-preview-modal__body {
       display: flex;
       flex-direction: column;
@@ -430,6 +447,7 @@ interface ContenidoFormState {
 export class EventosNoticiasComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private auth = inject(AuthService);
+  private confirmDialog = inject(ConfirmDialogService);
   private toast = inject(ToastService);
   private sentry = inject(SentryService);
 
@@ -525,6 +543,9 @@ export class EventosNoticiasComponent implements OnInit {
     this.formError.set('');
     this.selectedFile.set(null);
     this.imagePreview.set(this.imageUrl(item));
+    if (item.tipo === 'evento' && item.evento_modalidad === 'box' && !item.evento_ubicacion) {
+      this.updateFormField('evento_ubicacion', 'Jauría Strength and Fitness');
+    }
     this.showEditorModal.set(true);
   }
 
@@ -655,7 +676,13 @@ export class EventosNoticiasComponent implements OnInit {
   }
 
   async deleteItem(item: ContenidoBox) {
-    const confirmed = window.confirm(`Eliminar "${item.titulo}" y su imagen asociada?`);
+    const confirmed = await this.confirmDialog.open({
+      title: 'Eliminar contenido',
+      message: `Se eliminará "${item.titulo}" y su imagen asociada. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Sí, eliminar',
+      cancelLabel: 'No, conservar',
+      tone: 'danger',
+    });
     if (!confirmed) return;
 
     this.actionLoadingId.set(item.id);
@@ -757,7 +784,9 @@ export class EventosNoticiasComponent implements OnInit {
 
   private toLocalInputValue(value: string | null) {
     if (!value) return '';
-    return value.slice(0, 16);
+    const date = new Date(value);
+    const offsetMs = date.getTimezoneOffset() * 60_000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
   }
 
   private toIsoValue(value: string) {
