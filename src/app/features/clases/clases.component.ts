@@ -57,6 +57,23 @@ interface MiInscripcion {
 
 type Vista = 'semana' | 'lista';
 
+const CLASE_THEME = {
+  textStrong: '#f4f1eb',
+  textMuted: '#938c84',
+  border: '#2b3033',
+  surface: '#151718',
+  surfaceAlt: '#1d2022',
+  primary: '#a61f24',
+  primarySoft: 'rgba(166, 31, 36, 0.14)',
+  primarySoftStrong: 'rgba(166, 31, 36, 0.24)',
+  neutralSoft: 'rgba(147, 140, 132, 0.14)',
+  neutralSoftStrong: 'rgba(147, 140, 132, 0.22)',
+  accent: '#c12a30',
+  accentSoftStrong: 'rgba(193, 42, 48, 0.24)',
+  info: '#3d6e91',
+  infoSoft: 'rgba(61, 110, 145, 0.16)',
+} as const;
+
 @Component({
   selector: 'app-clases',
   standalone: true,
@@ -69,7 +86,7 @@ type Vista = 'semana' | 'lista';
 
     <!-- Alerta membresía inactiva (solo atletas) -->
     @if (!auth.isCoach() && membresiaActiva() === false) {
-      <div class="alert alert--error" style="margin-bottom:20px;">
+      <div class="alert alert--error clases-alert">
         <strong>Membresía inactiva</strong> — Tu plan no está activo. No puedes
         inscribirte a clases. Ve a <strong>Mi Pago</strong> para ver el estado
         de tu membresía o contacta al coach.
@@ -107,15 +124,12 @@ type Vista = 'semana' | 'lista';
     }
 
     <!-- Toolbar -->
-    <div class="toolbar-row" style="margin-bottom:20px;">
-      <!-- Navegación de semana -->
-      <div style="display:flex;align-items:center;gap:12px;">
+    <div class="toolbar-row clases-toolbar">
+      <div class="clases-toolbar__nav">
         <button class="btn btn--ghost btn--sm" (click)="semanaAnterior()" [disabled]="!puedeIrSemanaAnterior()">
           ‹
         </button>
-        <span
-          style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.05em;color:#fff;"
-        >
+        <span class="week-toolbar__label">
           {{ semanaLabel() }}
         </span>
         <button class="btn btn--ghost btn--sm" (click)="semanaSiguiente()">
@@ -123,23 +137,18 @@ type Vista = 'semana' | 'lista';
         </button>
         <button class="btn btn--ghost btn--sm" (click)="irHoy()">Hoy</button>
       </div>
-      <!-- Vista + acciones -->
-      <div style="display:flex;gap:10px;align-items:center;">
-        <div
-          style="display:flex;border:1px solid #2a2a2a;border-radius:8px;overflow:hidden;"
-        >
+      <div class="clases-toolbar__actions">
+        <div class="clases-view-toggle">
           <button
-            class="btn btn--sm"
+            class="btn btn--sm clases-view-toggle__button"
             [class]="vista() === 'semana' ? 'btn--primary' : 'btn--ghost'"
-            style="border-radius:0;"
             (click)="vista.set('semana')"
           >
             Semana
           </button>
           <button
-            class="btn btn--sm"
+            class="btn btn--sm clases-view-toggle__button"
             [class]="vista() === 'lista' ? 'btn--primary' : 'btn--ghost'"
-            style="border-radius:0;"
             (click)="vista.set('lista')"
           >
             Lista
@@ -210,8 +219,7 @@ type Vista = 'semana' | 'lista';
         <div class="data-table-wrapper__header">
           <span class="data-table-wrapper__title">Clases de la semana</span>
           <select
-            class="form-control"
-            style="width:auto;height:38px;"
+            class="form-control clases-filter-select"
             [ngModel]="filterTipo()"
             (ngModelChange)="onFilterTipoChange($event)"
           >
@@ -223,7 +231,7 @@ type Vista = 'semana' | 'lista';
           </select>
         </div>
         @if (loading()) {
-          <div style="padding:40px;text-align:center;color:#666;">
+          <div class="clases-empty-state">
             Cargando...
           </div>
         } @else {
@@ -243,23 +251,23 @@ type Vista = 'semana' | 'lista';
                 <tr [class.row-cancelled]="c.cancelada">
                   <td>
                     <span
+                      class="class-type-pill"
                       [style.background]="tipoBg(c.tipo)"
                       [style.color]="tipoColor(c.tipo)"
-                      style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;"
                     >
                       {{ c.tipo }}
                     </span>
                   </td>
-                  <td style="font-size:13px;">
+                  <td class="clases-table-cell">
                     {{ c.fecha | dateEc: 'EEEE dd/MM' }}
                   </td>
-                  <td style="font-size:13px;">
+                  <td class="clases-table-cell">
                     {{ c.hora_inicio }} – {{ c.hora_fin }}
                   </td>
-                  <td style="font-size:13px;">
+                  <td class="clases-table-cell">
                     {{ c.profiles?.nombre_completo ?? '—' }}
                   </td>
-                  <td style="font-size:13px;">
+                  <td class="clases-table-cell">
                     {{ inscritosCount(c.id) }} / {{ c.capacidad_maxima }}
                   </td>
                   <td>
@@ -304,10 +312,7 @@ type Vista = 'semana' | 'lista';
                 </tr>
               } @empty {
                 <tr>
-                  <td
-                    colspan="6"
-                    style="text-align:center;padding:40px;color:#666;"
-                  >
+                  <td colspan="6" class="clases-empty-state">
                     Sin clases disponibles hoy o en el futuro.
                   </td>
                 </tr>
@@ -390,7 +395,7 @@ type Vista = 'semana' | 'lista';
                     max="100"
                   />
                 </div>
-                <div class="form-group" style="grid-column:1/-1;">
+                <div class="form-group clases-form-group--full">
                   <label class="form-label">Descripción / WOD del día</label>
                   <input
                     class="form-control"
@@ -401,7 +406,7 @@ type Vista = 'semana' | 'lista';
                   />
                 </div>
               </div>
-              <div class="modal__footer" style="padding:0;margin-top:20px;">
+              <div class="modal__footer clases-modal-footer">
                 <button
                   type="button"
                   class="btn btn--ghost"
@@ -430,9 +435,7 @@ type Vista = 'semana' | 'lista';
           <div class="modal__header">
             <h3 class="modal__title">
               {{ claseSeleccionada()!.tipo }}
-              <span
-                style="font-size:14px;font-weight:400;color:#666;text-transform:none;font-family:'Inter',sans-serif;"
-              >
+              <span class="modal__title-meta">
                 · {{ claseSeleccionada()!.fecha | dateEc: 'EEEE dd/MM' }}
                 {{ claseSeleccionada()!.hora_inicio }} –
                 {{ claseSeleccionada()!.hora_fin }}
@@ -447,20 +450,16 @@ type Vista = 'semana' | 'lista';
           </div>
           <div class="modal__body">
             @if (claseSeleccionada()!.descripcion) {
-              <div class="alert alert--info" style="margin-bottom:16px;">
-                <div style="display:flex;align-items:flex-start;gap:10px;">
+              <div class="alert alert--info clases-description-alert">
+                <div class="clases-description-alert__body">
                   <i-lucide name="clipboard" />
                   <span>{{ claseSeleccionada()!.descripcion }}</span>
                 </div>
               </div>
             }
 
-            <div
-              style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"
-            >
-              <span
-                style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#fff;text-transform:uppercase;"
-              >
+            <div class="clases-modal-summary">
+              <span class="modal__section-title">
                 Inscritos ({{ inscritos().length }} /
                 {{ claseSeleccionada()!.capacidad_maxima }})
               </span>
@@ -486,11 +485,11 @@ type Vista = 'semana' | 'lista';
             </div>
 
             @if (inscritosLoading()) {
-              <div style="text-align:center;padding:24px;color:#666;">
+              <div class="clases-modal-empty-state">
                 Cargando inscritos...
               </div>
             } @else if (inscritos().length === 0) {
-              <div style="text-align:center;padding:24px;color:#666;">
+              <div class="clases-modal-empty-state">
                 Sin inscritos todavía.
               </div>
             } @else {
@@ -507,7 +506,7 @@ type Vista = 'semana' | 'lista';
                 <tbody>
                   @for (ins of inscritos(); track ins.id) {
                     <tr>
-                      <td style="font-weight:600;color:#fff;">
+                      <td class="clases-atleta-cell">
                         {{ ins.profiles?.nombre_completo ?? '—' }}
                       </td>
                       <td>
@@ -520,7 +519,7 @@ type Vista = 'semana' | 'lista';
                       </td>
                       @if (auth.isCoach()) {
                         <td>
-                          <div style="display:flex;gap:8px;">
+                          <div class="clases-assistance-actions">
                             <button
                               class="btn btn--sm btn--ghost"
                               (click)="marcarAsistencia(ins.id, true)"
@@ -552,12 +551,107 @@ type Vista = 'semana' | 'lista';
   `,
   styles: [
     `
+      .clases-alert {
+        margin-bottom: 20px;
+      }
+      .clases-toolbar {
+        margin-bottom: 20px;
+      }
+      .clases-toolbar__nav,
+      .clases-toolbar__actions {
+        display: flex;
+        align-items: center;
+      }
+      .clases-toolbar__nav {
+        gap: 12px;
+      }
+      .clases-toolbar__actions {
+        gap: 10px;
+      }
+      .clases-view-toggle {
+        display: flex;
+        overflow: hidden;
+        border: 1px solid #2b3033;
+        border-radius: 8px;
+      }
+      .clases-view-toggle__button {
+        border-radius: 0;
+      }
+      .clases-filter-select {
+        width: auto;
+        height: 38px;
+      }
+      .clases-empty-state,
+      .clases-modal-empty-state {
+        text-align: center;
+        color: #938c84;
+      }
+      .clases-empty-state {
+        padding: 40px;
+      }
+      .clases-modal-empty-state {
+        padding: 24px;
+      }
+      .clases-table-cell {
+        font-size: 13px;
+      }
+      .clases-form-group--full {
+        grid-column: 1 / -1;
+      }
+      .clases-modal-footer {
+        margin-top: 20px;
+        padding: 0;
+      }
       .week-calendar {
-        background: #141414;
-        border: 1px solid #2a2a2a;
+        background: #151718;
+        border: 1px solid #2b3033;
         border-radius: 12px;
         overflow: hidden;
         overflow-x: auto;
+      }
+      .week-toolbar__label {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 16px;
+        letter-spacing: 0.05em;
+        color: #f4f1eb;
+      }
+      .class-type-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .modal__title-meta {
+        font-family: 'Manrope', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        color: #938c84;
+        text-transform: none;
+      }
+      .modal__section-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 16px;
+        color: #f4f1eb;
+        text-transform: uppercase;
+      }
+      .clases-description-alert {
+        margin-bottom: 16px;
+      }
+      .clases-description-alert__body {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .clases-modal-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
       }
       .clases-athlete-summary {
         display: grid;
@@ -576,32 +670,32 @@ type Vista = 'semana' | 'lista';
       .week-calendar__header {
         display: grid;
         grid-template-columns: repeat(7, minmax(140px, 1fr));
-        border-bottom: 1px solid #2a2a2a;
+        border-bottom: 1px solid #2b3033;
       }
       .week-calendar__day-header {
         padding: 12px 8px;
         text-align: center;
-        border-right: 1px solid #1e1e1e;
+        border-right: 1px solid #1d2022;
         &.today {
-          background: rgba(183, 28, 28, 0.08);
+          background: rgba(166, 31, 36, 0.14);
         }
       }
       .week-calendar__day-name {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-size: 10px;
         font-weight: 700;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: #666;
+        color: #938c84;
       }
       .week-calendar__day-num {
         font-family: 'Bebas Neue', sans-serif;
         font-size: 22px;
-        color: #fff;
+        color: #f4f1eb;
         line-height: 1.2;
         margin-top: 2px;
         &.today {
-          color: #b71c1c;
+          color: #a61f24;
         }
       }
       .week-calendar__body {
@@ -610,14 +704,14 @@ type Vista = 'semana' | 'lista';
         min-height: 200px;
       }
       .week-calendar__col {
-        border-right: 1px solid #1e1e1e;
+        border-right: 1px solid #1d2022;
         padding: 8px;
         min-height: 120px;
         display: flex;
         flex-direction: column;
         gap: 6px;
         &.today {
-          background: rgba(183, 28, 28, 0.04);
+          background: rgba(166, 31, 36, 0.08);
         }
         &:last-child {
           border-right: none;
@@ -630,27 +724,28 @@ type Vista = 'semana' | 'lista';
         border-radius: 8px;
         padding: 8px 10px;
         cursor: pointer;
-        transition: filter 0.2s ease;
+        border-left: 3px solid transparent;
+        transition: transform 0.2s ease, border-color 0.2s ease;
         &:hover {
-          filter: brightness(1.15);
+          transform: translateY(-1px);
         }
       }
       .week-event__time {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-size: 10px;
         font-weight: 600;
-        opacity: 0.7;
+        color: #938c84;
         margin-bottom: 2px;
       }
       .week-event__title {
         font-family: 'Bebas Neue', sans-serif;
         font-size: 14px;
         letter-spacing: 0.05em;
-        color: #fff;
+        color: #f4f1eb;
       }
       .week-event__desc {
         font-size: 10px;
-        opacity: 0.6;
+        color: rgba(244, 241, 235, 0.72);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -658,7 +753,7 @@ type Vista = 'semana' | 'lista';
       }
       .week-event__coach {
         font-size: 10px;
-        opacity: 0.5;
+        color: rgba(210, 203, 193, 0.7);
         margin-top: 4px;
       }
       .week-event__meta {
@@ -671,31 +766,43 @@ type Vista = 'semana' | 'lista';
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        opacity: 0.8;
+        color: rgba(244, 241, 235, 0.82);
       }
       .week-event--wod {
-        background: rgba(183, 28, 28, 0.25);
-        border-left: 3px solid #b71c1c;
+        background: rgba(166, 31, 36, 0.24);
+        border-left-color: #a61f24;
       }
       .week-event--open-gym {
-        background: rgba(80, 80, 80, 0.3);
-        border-left: 3px solid #888;
+        background: rgba(147, 140, 132, 0.18);
+        border-left-color: #938c84;
       }
       .week-event--barbell-club {
-        background: rgba(123, 17, 17, 0.3);
-        border-left: 3px solid #7b1111;
+        background: rgba(193, 42, 48, 0.18);
+        border-left-color: #c12a30;
       }
       .week-event--fundamentos {
-        background: rgba(33, 150, 243, 0.2);
-        border-left: 3px solid #42a5f5;
+        background: rgba(61, 110, 145, 0.16);
+        border-left-color: #3d6e91;
       }
       .row-cancelled td {
         opacity: 0.5;
         text-decoration: line-through;
       }
+      .clases-atleta-cell {
+        color: #f4f1eb;
+        font-weight: 600;
+      }
+      .clases-assistance-actions {
+        display: flex;
+        gap: 8px;
+      }
       @media (max-width: 900px) {
         .clases-athlete-summary {
           grid-template-columns: 1fr;
+        }
+        .clases-modal-summary {
+          flex-direction: column;
+          align-items: stretch;
         }
       }
     `,
@@ -1147,12 +1254,12 @@ export class ClasesComponent implements OnInit {
     return (
       (
         {
-          WOD: 'rgba(183,28,28,0.2)',
-          'Open Gym': 'rgba(80,80,80,0.2)',
-          'Barbell Club': 'rgba(123,17,17,0.2)',
-          Fundamentos: 'rgba(33,150,243,0.2)',
+          WOD: CLASE_THEME.primarySoftStrong,
+          'Open Gym': CLASE_THEME.neutralSoftStrong,
+          'Barbell Club': CLASE_THEME.accentSoftStrong,
+          Fundamentos: CLASE_THEME.infoSoft,
         } as Record<string, string>
-      )[tipo] ?? 'rgba(80,80,80,0.2)'
+      )[tipo] ?? CLASE_THEME.neutralSoft
     );
   }
 
@@ -1160,12 +1267,12 @@ export class ClasesComponent implements OnInit {
     return (
       (
         {
-          WOD: '#B71C1C',
-          'Open Gym': '#CCCCCC',
-          'Barbell Club': '#7B1111',
-          Fundamentos: '#42a5f5',
+          WOD: CLASE_THEME.primary,
+          'Open Gym': CLASE_THEME.textStrong,
+          'Barbell Club': CLASE_THEME.accent,
+          Fundamentos: CLASE_THEME.info,
         } as Record<string, string>
-      )[tipo] ?? '#aaa'
+      )[tipo] ?? CLASE_THEME.textMuted
     );
   }
 

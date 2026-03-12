@@ -4,7 +4,7 @@ import { roleGuard } from './core/auth/role.guard';
 import { ShellComponent } from './core/layout/shell/shell.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'app/clases', pathMatch: 'full' },
+  { path: '', redirectTo: 'app/novedades', pathMatch: 'full' },
   {
     path: 'auth',
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
@@ -14,6 +14,10 @@ export const routes: Routes = [
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
+      {
+        path: 'novedades',
+        loadComponent: () => import('./features/novedades/novedades.component').then(m => m.NovedadesComponent),
+      },
       {
         path: 'dashboard',
         canActivate: [roleGuard], data: { roles: ['admin'] },
@@ -49,6 +53,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/configuracion/configuracion.component').then(m => m.ConfiguracionComponent),
       },
       {
+        path: 'eventos-noticias',
+        canActivate: [roleGuard], data: { roles: ['coach', 'admin'] },
+        loadComponent: () => import('./features/eventos-noticias/eventos-noticias.component').then(m => m.EventosNoticiasComponent),
+      },
+      {
         path: 'workflows',
         canActivate: [roleGuard], data: { roles: ['admin'] },
         loadComponent: () => import('./features/workflows/workflows.component').then(m => m.WorkflowsComponent),
@@ -67,8 +76,8 @@ export const routes: Routes = [
         canActivate: [roleGuard], data: { roles: ['admin'] },
         loadComponent: () => import('./features/roles/roles.component').then(m => m.RolesComponent),
       },
-      { path: '**', redirectTo: 'clases' },
+      { path: '**', redirectTo: 'novedades' },
     ],
   },
-  { path: '**', redirectTo: 'app/clases' },
+  { path: '**', redirectTo: 'app/novedades' },
 ];

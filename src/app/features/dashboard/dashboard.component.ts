@@ -12,6 +12,18 @@ interface KPI { label: string; value: string | number; trend?: string; trendUp?:
 interface Alerta { tipo: string; titulo: string; msg: string; }
 type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
 
+const BRAND_CHART = {
+  primaryFill: 'rgba(166, 31, 36, 0.78)',
+  primaryBorder: '#a61f24',
+  accentFill: 'rgba(193, 42, 48, 0.72)',
+  neutralFill: 'rgba(147, 140, 132, 0.72)',
+  surface: '#151718',
+  grid: 'rgba(58, 64, 68, 0.6)',
+  tick: '#938c84',
+  legend: '#d2cbc1',
+  fontFamily: 'Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+} as const;
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -22,12 +34,11 @@ type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
       <h2 class="page-header__title">Dashboard</h2>
     </div>
 
-    <!-- ── KPIs ── -->
-    <div class="stats-grid" style="margin-bottom:28px;">
+    <div class="dashboard-kpis stats-grid">
       @for (kpi of kpis(); track kpi.label) {
         <div class="stat-card">
           <div class="stat-card__label">{{ kpi.label }}</div>
-          <div class="stat-card__value" style="margin-top:8px;">{{ kpi.value }}</div>
+          <div class="dashboard-kpi-value stat-card__value">{{ kpi.value }}</div>
           @if (kpi.trend) {
             <div class="stat-card__trend" [class.up]="kpi.trendUp" [class.down]="!kpi.trendUp">
               {{ kpi.trend }}
@@ -37,39 +48,33 @@ type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
       }
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;" class="charts-grid">
-
-      <!-- Gráfico cobros 6 meses -->
+    <div class="charts-grid dashboard-grid">
       <div class="data-table-wrapper">
         <div class="data-table-wrapper__header">
           <span class="data-table-wrapper__title">Cobros (últimos 6 meses)</span>
         </div>
-        <div style="padding:20px;">
-          <canvas #barChart style="max-height:200px;"></canvas>
+        <div class="dashboard-card-body">
+          <canvas #barChart class="dashboard-chart-canvas"></canvas>
         </div>
       </div>
 
-      <!-- Gráfico distribución planes -->
       <div class="data-table-wrapper">
         <div class="data-table-wrapper__header">
           <span class="data-table-wrapper__title">Distribución por Plan</span>
         </div>
-        <div style="padding:20px;display:flex;align-items:center;justify-content:center;">
-          <canvas #donutChart style="max-height:200px;max-width:200px;"></canvas>
+        <div class="dashboard-card-body dashboard-card-body--centered">
+          <canvas #donutChart class="dashboard-chart-canvas dashboard-chart-canvas--donut"></canvas>
         </div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="bottom-grid">
-
-      <!-- Estado de servicios -->
+    <div class="bottom-grid dashboard-grid">
       <div class="data-table-wrapper">
         <div class="data-table-wrapper__header">
           <span class="data-table-wrapper__title">Estado de Servicios</span>
           <button class="btn btn--ghost btn--sm" (click)="refreshStatus()">↻</button>
         </div>
-        <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-
+        <div class="dashboard-status-body">
           <div class="service-card">
             <div>
               <div class="service-card__name">n8n</div>
@@ -85,7 +90,7 @@ type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
               <div class="service-card__name">WhatsApp · jauriaCrossfit</div>
               <div class="service-card__detail">Evolution API</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div class="dashboard-service-actions">
               <div class="status-indicator" [class]="'status-indicator--' + waStatus()">
                 <div class="dot"></div>{{ statusLabel(waStatus()) }}
               </div>
@@ -104,33 +109,95 @@ type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
               <div class="dot"></div>Healthy
             </div>
           </div>
-
         </div>
       </div>
 
-      <!-- Alertas + actividad -->
       <div class="data-table-wrapper">
         <div class="data-table-wrapper__header">
           <span class="data-table-wrapper__title">Alertas Activas</span>
         </div>
-        <div style="padding:16px;">
+        <div class="dashboard-alerts-body">
           @if (alertas().length === 0) {
-            <div style="text-align:center;padding:24px;color:#938C84;">
+            <div class="dashboard-alerts-empty">
               Sin alertas activas
             </div>
           } @else {
             @for (a of alertas(); track a.titulo) {
-              <div class="alert alert--{{ a.tipo }}" style="margin-bottom:8px;">
+              <div class="alert dashboard-alert alert--{{ a.tipo }}">
                 <strong>{{ a.titulo }}</strong> — {{ a.msg }}
               </div>
             }
           }
         </div>
       </div>
-
     </div>
   `,
   styles: [`
+    .dashboard-kpis {
+      margin-bottom: 28px;
+    }
+
+    .dashboard-kpi-value {
+      margin-top: 8px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .charts-grid {
+      margin-bottom: 28px;
+    }
+
+    .dashboard-card-body {
+      padding: 20px;
+    }
+
+    .dashboard-chart-canvas {
+      display: block;
+      width: 100%;
+      max-height: 200px;
+    }
+
+    .dashboard-chart-canvas--donut {
+      max-width: 200px;
+    }
+
+    .dashboard-card-body--centered {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dashboard-status-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dashboard-alerts-body {
+      padding: 16px;
+    }
+
+    .dashboard-alerts-empty {
+      padding: 24px;
+      text-align: center;
+      color: #938c84;
+    }
+
+    .dashboard-alert {
+      margin-bottom: 8px;
+    }
+
+    .dashboard-service-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     @media (max-width: 1024px) {
       .charts-grid, .bottom-grid { grid-template-columns: 1fr !important; }
     }
@@ -230,14 +297,31 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       type: 'bar',
       data: {
         labels: months,
-        datasets: [{ label: 'USD cobrados', data: totals, backgroundColor: 'rgba(183,28,28,0.7)', borderColor: '#B71C1C', borderWidth: 1, borderRadius: 4 }],
+        datasets: [{
+          label: 'USD cobrados',
+          data: totals,
+          backgroundColor: BRAND_CHART.primaryFill,
+          borderColor: BRAND_CHART.primaryBorder,
+          borderWidth: 1,
+          borderRadius: 4,
+        }],
       },
       options: {
         responsive: true,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#666' }, grid: { color: '#1e1e1e' } },
-          y: { ticks: { color: '#666', callback: v => `$${v}` }, grid: { color: '#1e1e1e' } },
+          x: {
+            ticks: { color: BRAND_CHART.tick, font: { family: BRAND_CHART.fontFamily, size: 11 } },
+            grid: { color: BRAND_CHART.grid },
+          },
+          y: {
+            ticks: {
+              color: BRAND_CHART.tick,
+              callback: (v) => `$${v}`,
+              font: { family: BRAND_CHART.fontFamily, size: 11 },
+            },
+            grid: { color: BRAND_CHART.grid },
+          },
         },
       },
     };
@@ -255,12 +339,24 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       type: 'doughnut',
       data: {
         labels: ['Mensual', 'Trimestral', 'Anual'],
-        datasets: [{ data: counts, backgroundColor: ['rgba(183,28,28,0.8)', 'rgba(156,39,176,0.8)', 'rgba(255,152,0,0.8)'], borderColor: '#141414', borderWidth: 2 }],
+        datasets: [{
+          data: counts,
+          backgroundColor: [BRAND_CHART.primaryFill, BRAND_CHART.accentFill, BRAND_CHART.neutralFill],
+          borderColor: BRAND_CHART.surface,
+          borderWidth: 2,
+        }],
       },
       options: {
         responsive: true,
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#aaa', padding: 12, font: { size: 12 } } },
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: BRAND_CHART.legend,
+              padding: 12,
+              font: { family: BRAND_CHART.fontFamily, size: 12, weight: 600 },
+            },
+          },
         },
       },
     };

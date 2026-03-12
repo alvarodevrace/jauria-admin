@@ -3,6 +3,12 @@ import { processLock } from '@supabase/auth-js';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 import { SentryService } from './sentry.service';
+import {
+  ContenidoBoxFilters,
+  ContenidoBoxPayload,
+  ContenidoTipo,
+  EstadoPublicacion,
+} from '../models/contenido-box.model';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -107,6 +113,107 @@ export class SupabaseService {
 
   async getLeads() {
     return this.client.from('leads').select('*').order('created_at', { ascending: false });
+  }
+
+  // ── Contenido Box ────────────────────────────────────────────────────────
+
+  async getContenidoPublicado(filters?: { tipo?: ContenidoTipo | '' }) {
+    let query = this.client
+      .from('contenido_box')
+      .select('*, profiles(nombre_completo)')
+      .eq('estado_publicacion', 'published')
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    if (filters?.tipo) query = query.eq('tipo', filters.tipo);
+    return query;
+  }
+
+  async getContenidoAdmin(filters?: ContenidoBoxFilters) {
+    let query = this.client
+      .from('contenido_box')
+      .select('*, profiles(nombre_completo)')
+      .order('updated_at', { ascending: false });
+
+    if (filters?.tipo) query = query.eq('tipo', filters.tipo);
+    if (filters?.estado) query = query.eq('estado_publicacion', filters.estado);
+    if (filters?.search?.trim()) {
+      const term = filters.search.trim().replace(/,/g, ' ');
+      query = query.or(`titulo.ilike.%${term}%,descripcion.ilike.%${term}%`);
+    }
+
+    return query;
+  }
+
+  async createContenido(data: ContenidoBoxPayload) {
+    const result = await this.client.from('contenido_box').insert(data).select().single();
+    if (result.error) this.sentry.captureError(result.error, { action: 'createContenido' });
+    return result;
+  }
+
+  async updateContenido(id: number, data: Partial<ContenidoBoxPayload>) {
+    const result = await this.client.from('contenido_box').update(data).eq('id', id).select().single();
+    if (result.error) this.sentry.captureError(result.error, { action: 'updateContenido', id });
+    return result;
+  }
+
+  async deleteContenido(id: number, imagenPath?: string | null) {
+    const result = await this.client.from('contenido_box').delete().eq('id', id);
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'deleteContenido', id });
+      return result;
+    }
+
+    if (imagenPath) {
+      const { error: storageError } = await this.client.storage
+        .from('contenido-box')
+        .remove([imagenPath]);
+
+      if (storageError) {
+        this.sentry.captureError(storageError, { action: 'deleteContenidoImage', id, imagenPath });
+      }
+    }
+
+    return result;
+  }
+
+  async setContenidoPublicationState(id: number, estado: EstadoPublicacion) {
+    const payload = {
+      estado_publicacion: estado,
+      published_at: estado === 'published' ? new Date().toISOString() : null,
+    };
+
+    const result = await this.client.from('contenido_box').update(payload).eq('id', id).select().single();
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'setContenidoPublicationState', id, estado });
+    }
+    return result;
+  }
+
+  async uploadContenidoImage(file: File, fileName?: string) {
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const safeExtension = extension === 'jpeg' ? 'jpg' : extension;
+    const generatedName = fileName ?? `${crypto.randomUUID()}.${safeExtension}`;
+    const filePath = `contenido/${new Date().toISOString().slice(0, 10)}/${generatedName}`;
+
+    const result = await this.client.storage
+      .from('contenido-box')
+      .upload(filePath, file, { upsert: false, contentType: file.type });
+
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'uploadContenidoImage', filePath });
+    }
+
+    return {
+      ...result,
+      filePath,
+    };
+  }
+
+  getContenidoImageUrl(path: string | null | undefined) {
+    if (!path) return '';
+    const { data } = this.client.storage.from('contenido-box').getPublicUrl(path);
+    return data.publicUrl;
   }
 
   // ── Profiles ──────────────────────────────────────────────────────────────

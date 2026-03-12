@@ -30,6 +30,11 @@ import { AuthService } from '../../auth/auth.service';
         <!-- General — todos los roles -->
         <span class="sidebar__section-label">General</span>
 
+        <a class="sidebar__item" routerLink="/app/novedades" routerLinkActive="active" (click)="close()">
+          <i-lucide class="sidebar__item-icon" name="newspaper" />
+          <span>Novedades</span>
+        </a>
+
         <a class="sidebar__item" routerLink="/app/clases" routerLinkActive="active" (click)="close()">
           <i-lucide class="sidebar__item-icon" name="barbell" />
           <span>Clases</span>
@@ -69,6 +74,11 @@ import { AuthService } from '../../auth/auth.service';
           <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="settings-2" />
             <span>Configuración</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/eventos-noticias" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="calendar-range" />
+            <span>Eventos y Noticias</span>
           </a>
         }
 

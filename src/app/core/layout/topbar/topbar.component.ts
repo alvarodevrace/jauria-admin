@@ -5,6 +5,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 
 const ROUTE_TITLES: Record<string, string> = {
+  '/app/novedades':      'Novedades',
   '/app/dashboard':      'Dashboard',
   '/app/clientes':       'Clientes',
   '/app/clases':         'Clases',
@@ -12,6 +13,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/app/conversaciones': 'Conversaciones WhatsApp',
   '/app/leads':          'Leads',
   '/app/configuracion':  'Configuración',
+  '/app/eventos-noticias': 'Eventos y Noticias',
   '/app/workflows':      'Workflows n8n',
   '/app/mi-cuenta':      'Mi Cuenta',
   '/app/mi-pago':        'Mi Pago',
