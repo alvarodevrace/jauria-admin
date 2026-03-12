@@ -2,10 +2,8 @@ import { Component, OnInit, OnDestroy, inject, signal, ElementRef, ViewChild, Af
 import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SupabaseService } from '../../core/services/supabase.service';
-import { N8nService } from '../../core/services/n8n.service';
-import { EvolutionService } from '../../core/services/evolution.service';
+import { AdminOpsService } from '../../core/services/admin-ops.service';
 import { ToastService } from '../../core/services/toast.service';
-import { environment } from '../../../environments/environment';
 
 Chart.register(...registerables);
 
@@ -209,8 +207,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('donutChart') donutChartEl!: ElementRef<HTMLCanvasElement>;
 
   private supabase = inject(SupabaseService);
-  private n8n      = inject(N8nService);
-  private evolution = inject(EvolutionService);
+  private adminOps = inject(AdminOpsService);
   private toast    = inject(ToastService);
 
   kpis      = signal<KPI[]>([]);
@@ -365,48 +362,39 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   refreshStatus() {
-    if (!environment.externalOpsChecksEnabled) {
-      this.n8nStatus.set('warning');
-      this.waStatus.set('warning');
-      this.alertas.update((current) => {
-        const filtered = current.filter((alert) => alert.titulo !== 'Servicios externos no verificados');
-        return [
-          ...filtered,
-          {
-            tipo: 'info',
-            titulo: 'Servicios externos no verificados',
-            msg: 'En localhost no se ejecutan chequeos directos a n8n/Evolution para evitar ruido de CORS.',
-          },
-        ];
-      });
-      return;
-    }
-
     this.n8nStatus.set('checking');
-    this.n8n.getWorkflows().subscribe({
-      next: res => { this.wfCount.set(res.data?.filter(w => w.active).length ?? 0); this.n8nStatus.set('online'); },
-      error: () => this.n8nStatus.set('offline'),
-    });
-    this.evolution.getInstances().subscribe({
-      next: instances => {
-        const list = Array.isArray(instances) ? instances : [instances];
-        const j = list.find(i => i.instance?.instanceName === 'jauriaCrossfit');
-        this.waStatus.set(j?.instance?.connectionStatus === 'open' ? 'online' : 'offline');
-        if (j?.instance?.connectionStatus !== 'open') {
-          this.alertas.update(a => {
-            const f = a.filter(al => al.titulo !== 'WhatsApp Desconectada');
-            return [...f, { tipo: 'error', titulo: 'WhatsApp Desconectada', msg: 'Instancia jauriaCrossfit offline — requiere QR' }];
-          });
-        }
+    this.waStatus.set('checking');
+
+    this.adminOps.getOpsStatus().subscribe({
+      next: (status) => {
+        this.wfCount.set(Number(status.n8n.activeWorkflows ?? 0));
+        this.n8nStatus.set(status.n8n.status);
+        this.waStatus.set(status.evolution.status);
+        this.alertas.update((current) => {
+          const filtered = current.filter((alert) =>
+            ![
+              'WhatsApp Desconectada',
+              'WhatsApp desconectada',
+              'n8n no verificado',
+              'Evolution no verificado',
+              'Supabase no verificado',
+            ].includes(alert.titulo),
+          );
+
+          return [...filtered, ...status.alerts];
+        });
       },
-      error: () => this.waStatus.set('offline'),
+      error: () => {
+        this.n8nStatus.set('warning');
+        this.waStatus.set('warning');
+      },
     });
   }
 
   reconectarWA() {
-    this.evolution.connectInstance().subscribe({
+    this.adminOps.connectWhatsApp().subscribe({
       next: res => { if (res?.code) this.toast.info('Escanea el QR desde WhatsApp para reconectar.'); },
-      error: () => this.toast.error('No se pudo conectar con Evolution API'),
+      error: () => this.toast.error('No se pudo reconectar la instancia de WhatsApp'),
     });
   }
 
