@@ -5,11 +5,15 @@ import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class N8nService {
-  private readonly base = environment.n8nApiUrl;
-  private readonly headers = new HttpHeaders({
-    'X-N8N-API-KEY': environment.n8nApiKey,
-    'Content-Type': 'application/json',
-  });
+  private readonly base = environment.backendApiUrl
+    ? `${environment.backendApiUrl}/n8n`
+    : environment.n8nApiUrl;
+  private readonly headers = environment.backendApiUrl
+    ? new HttpHeaders({ 'Content-Type': 'application/json' })
+    : new HttpHeaders({
+        'X-N8N-API-KEY': environment.n8nApiKey,
+        'Content-Type': 'application/json',
+      });
 
   constructor(private http: HttpClient) {}
 

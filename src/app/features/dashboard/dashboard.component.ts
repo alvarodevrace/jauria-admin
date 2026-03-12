@@ -5,6 +5,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { N8nService } from '../../core/services/n8n.service';
 import { EvolutionService } from '../../core/services/evolution.service';
 import { ToastService } from '../../core/services/toast.service';
+import { environment } from '../../../environments/environment';
 
 Chart.register(...registerables);
 
@@ -364,6 +365,23 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   refreshStatus() {
+    if (!environment.externalOpsChecksEnabled) {
+      this.n8nStatus.set('warning');
+      this.waStatus.set('warning');
+      this.alertas.update((current) => {
+        const filtered = current.filter((alert) => alert.titulo !== 'Servicios externos no verificados');
+        return [
+          ...filtered,
+          {
+            tipo: 'info',
+            titulo: 'Servicios externos no verificados',
+            msg: 'En localhost no se ejecutan chequeos directos a n8n/Evolution para evitar ruido de CORS.',
+          },
+        ];
+      });
+      return;
+    }
+
     this.n8nStatus.set('checking');
     this.n8n.getWorkflows().subscribe({
       next: res => { this.wfCount.set(res.data?.filter(w => w.active).length ?? 0); this.n8nStatus.set('online'); },

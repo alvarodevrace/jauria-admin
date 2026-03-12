@@ -72,7 +72,7 @@ import { AuthService } from '../../auth/auth.service';
           </a>
 
           <a class="sidebar__item" routerLink="/app/eventos-noticias" routerLinkActive="active" (click)="close()">
-            <i-lucide class="sidebar__item-icon" name="calendar-range" />
+            <i-lucide class="sidebar__item-icon" name="mail" />
             <span>Eventos y Noticias</span>
           </a>
         }

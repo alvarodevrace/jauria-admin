@@ -113,11 +113,11 @@ type ModalMode = 'crear' | 'editar' | null;
                   <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
                     <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
                     <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-lucide name="clipboard" /></button>
-                    <button class="btn btn--ghost btn--sm" title="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)" [disabled]="loadingAccion() === c.id_cliente + '_rec'">
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Enviar recordatorio WhatsApp" aria-label="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)" [disabled]="loadingAccion() === c.id_cliente + '_rec'">
                       @if (loadingAccion() === c.id_cliente + '_rec') { ... } @else { <i-lucide name="send" /> }
                     </button>
                     @if (c.metodo_pago === 'PAYPHONE' || c.plan !== 'MENSUAL') {
-                      <button class="btn btn--ghost btn--sm" title="Generar link Payphone" (click)="generarLinkPayphone(c)" [disabled]="loadingAccion() === c.id_cliente + '_pay'">
+                      <button class="btn btn--ghost btn--sm btn--icon" title="Generar link Payphone" aria-label="Generar link Payphone" (click)="generarLinkPayphone(c)" [disabled]="loadingAccion() === c.id_cliente + '_pay'">
                         @if (loadingAccion() === c.id_cliente + '_pay') { ... } @else { <i-lucide name="link" /> }
                       </button>
                     }
