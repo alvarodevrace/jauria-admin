@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
  */
 @Injectable({ providedIn: 'root' })
 export class SentryService {
-  private enabled = !!environment.sentryDsn;
+  private enabled = environment.sentryEnabled && !!environment.sentryDsn;
 
   /** Captura un error con contexto adicional */
   captureError(error: unknown, context?: Record<string, unknown>) {

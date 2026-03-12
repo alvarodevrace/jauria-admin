@@ -44,7 +44,7 @@ export class AuthService {
     } catch (error) {
       if (this.isInvalidRefreshTokenError(error)) {
         await this.resetLocalSession();
-      } else if (environment.sentryDsn) {
+      } else if (environment.sentryEnabled && environment.sentryDsn) {
         Sentry.captureException(error);
       }
     } finally {
@@ -57,7 +57,7 @@ export class AuthService {
         await this.loadProfile(session.user);
       } else {
         this._profile.set(null);
-        if (environment.sentryDsn) Sentry.setUser(null);
+        if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
       }
     });
   }
@@ -66,7 +66,7 @@ export class AuthService {
     await this.supabase.clearLocalSession();
     this._session.set(null);
     this._profile.set(null);
-    if (environment.sentryDsn) Sentry.setUser(null);
+    if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
   }
 
   private isInvalidRefreshTokenError(error: unknown): boolean {
@@ -81,7 +81,7 @@ export class AuthService {
     if (!error && data) {
       const p = data as UserProfile;
       this._profile.set(p);
-      if (environment.sentryDsn) {
+      if (environment.sentryEnabled && environment.sentryDsn) {
         Sentry.setUser({ id: p.id, email: p.email, username: p.nombre_completo, segment: p.rol });
       }
     } else if (error?.code === 'PGRST116') {
@@ -108,7 +108,7 @@ export class AuthService {
         .from('profiles').insert(newProfile).select().single();
       if (created) {
         this._profile.set(created as UserProfile);
-        if (environment.sentryDsn) {
+        if (environment.sentryEnabled && environment.sentryDsn) {
           const p = created as UserProfile;
           Sentry.setUser({ id: p.id, email: p.email, username: p.nombre_completo, segment: p.rol });
         }

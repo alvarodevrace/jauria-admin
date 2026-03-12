@@ -9,5 +9,6 @@ export const environment = {
   evolutionApiUrl: 'https://evolution.alvarodevrace.tech',
   evolutionApiKey: '', // Set via CI/CD secret: EVOLUTION_API_KEY
   // GlitchTip DSN — actualizar cuando DNS glitchtip.alvarodevrace.tech esté configurado
+  sentryEnabled: true,
   sentryDsn: 'https://8a43cf1897b44e1ba32121e2e3368cd5@glitchtip.alvarodevrace.tech/1',
 };

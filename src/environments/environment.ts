@@ -9,5 +9,6 @@ export const environment = {
   evolutionApiUrl: 'https://evolution.alvarodevrace.tech',
   evolutionApiKey: 'EvoApiJauria2026_xK9mP3nQ7rL5vT2w',
   // GlitchTip — error monitoring (open-source Sentry alternative, self-hosted)
+  sentryEnabled: false,
   sentryDsn: 'https://8a43cf1897b44e1ba32121e2e3368cd5@glitchtip.alvarodevrace.tech/1',
 };

@@ -63,8 +63,8 @@ const providers: ApplicationConfig['providers'] = [
   ),
 ];
 
-// Sentry error handler solo si hay DSN configurado
-if (environment.sentryDsn) {
+// Sentry error handler solo si está habilitado y hay DSN configurado
+if (environment.sentryEnabled && environment.sentryDsn) {
   providers.push({
     provide: ErrorHandler,
     useValue: Sentry.createErrorHandler({ showDialog: false }),
