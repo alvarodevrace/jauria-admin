@@ -20,12 +20,12 @@ export class ActiveCountPipe implements PipeTransform {
       <h2 class="page-header__title">Workflows n8n</h2>
       <p class="page-header__subtitle">
         {{ workflows().length }} workflows ·
-        <span style="color:#4caf50;">{{ workflows() | activeCount }} activos</span>
+        <span style="color:#3D8B6D;">{{ workflows() | activeCount }} activos</span>
       </p>
     </div>
 
     @if (loading()) {
-      <div style="text-align:center;padding:60px;color:#666;">Cargando...</div>
+      <div style="text-align:center;padding:60px;color:#938C84;">Cargando...</div>
     } @else {
       <div style="display:grid;gap:16px;margin-bottom:32px;">
         @for (wf of workflows(); track wf.id) {
@@ -36,8 +36,8 @@ export class ActiveCountPipe implements PipeTransform {
                   <div class="dot"></div>
                 </div>
                 <div>
-                  <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.05em;color:#fff;">{{ wf.name }}</div>
-                  <div style="font-size:11px;color:#555;font-family:'Inter',sans-serif;">ID: {{ wf.id }}</div>
+                  <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.05em;color:#f4f1eb;">{{ wf.name }}</div>
+                  <div style="font-size:11px;color:#938C84;font-family:'Manrope',sans-serif;">ID: {{ wf.id }}</div>
                 </div>
               </div>
               <div style="display:flex;gap:8px;">
@@ -54,9 +54,9 @@ export class ActiveCountPipe implements PipeTransform {
             @if (expandedWf() === wf.id) {
               <div style="padding:0 0 8px;">
                 @if (execLoading()) {
-                  <div style="padding:20px;text-align:center;color:#666;font-size:13px;">Cargando ejecuciones...</div>
+                  <div style="padding:20px;text-align:center;color:#938C84;font-size:13px;">Cargando ejecuciones...</div>
                 } @else if (executions().length === 0) {
-                  <div style="padding:20px;text-align:center;color:#666;font-size:13px;">Sin ejecuciones recientes.</div>
+                  <div style="padding:20px;text-align:center;color:#938C84;font-size:13px;">Sin ejecuciones recientes.</div>
                 } @else {
                   <table class="data-table">
                     <thead>
@@ -65,7 +65,7 @@ export class ActiveCountPipe implements PipeTransform {
                     <tbody>
                       @for (ex of executions(); track ex.id) {
                         <tr>
-                          <td style="font-size:12px;font-family:monospace;color:#666;">{{ ex.id }}</td>
+                          <td style="font-size:12px;font-family:monospace;color:#938C84;">{{ ex.id }}</td>
                           <td style="font-size:12px;">{{ ex.mode }}</td>
                           <td><span class="badge badge--{{ exBadge(ex.status) }}">{{ ex.status }}</span></td>
                           <td style="font-size:12px;">{{ ex.startedAt | dateEc : 'dd/MM HH:mm' }}</td>

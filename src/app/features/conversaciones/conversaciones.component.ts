@@ -28,7 +28,7 @@ interface Conversacion {
     </div>
 
     @if (loading()) {
-      <div style="text-align:center;padding:60px;color:#666;">Cargando...</div>
+      <div style="text-align:center;padding:60px;color:#938C84;">Cargando...</div>
     } @else {
       <div class="stats-grid" style="margin-bottom:24px;">
         <div class="stat-card">
@@ -54,10 +54,10 @@ interface Conversacion {
           >
             <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
               <div>
-                <div style="font-weight:600;color:#fff;font-size:15px;">
+                <div style="font-weight:600;color:#f4f1eb;font-size:15px;">
                   {{ conv.clientes?.nombre_completo ?? 'Cliente' }}
                 </div>
-                <div style="font-size:12px;color:#666;margin-top:2px;">
+                <div style="font-size:12px;color:#938C84;margin-top:2px;">
                   {{ conv.telefono_whatsapp }} · Banco: {{ conv.banco_seleccionado || '—' }}
                 </div>
               </div>
@@ -66,7 +66,7 @@ interface Conversacion {
                 <span class="badge" [style.background]="urgencyBg(conv)" [style.color]="urgencyColor(conv)">
                   {{ urgencyLabel(conv) }}
                 </span>
-                <span style="font-size:12px;color:#666;">Intentos: {{ conv.intentos_validacion }}/3</span>
+                <span style="font-size:12px;color:#938C84;">Intentos: {{ conv.intentos_validacion }}/3</span>
               </div>
             </div>
 
@@ -88,13 +88,13 @@ interface Conversacion {
               <button class="btn btn--danger btn--sm" (click)="cerrar(conv.id)">Cerrar conversación</button>
             </div>
 
-            <div style="font-size:11px;color:#444;">
+            <div style="font-size:11px;color:#938C84;">
               Iniciada: {{ conv.created_at | dateEc : 'dd/MM/yyyy HH:mm' }} ·
               Expira: {{ conv.expires_at | dateEc : 'dd/MM/yyyy HH:mm' }}
             </div>
           </div>
         } @empty {
-          <div style="text-align:center;padding:60px;color:#666;">
+          <div style="text-align:center;padding:60px;color:#938C84;">
             No hay conversaciones activas en este momento.
           </div>
         }
@@ -156,18 +156,18 @@ export class ConversacionesComponent implements OnInit {
 
   urgencyColor(conv: Conversacion): string {
     const score = this.urgencyScore(conv);
-    if (score >= 4) return '#ef5350';
-    if (score === 3) return '#ff9800';
-    if (score === 2) return '#fbc02d';
-    return '#4caf50';
+    if (score >= 4) return '#C1454A';
+    if (score === 3) return '#C58A2A';
+    if (score === 2) return '#D6A847';
+    return '#3D8B6D';
   }
 
   urgencyBg(conv: Conversacion): string {
     const score = this.urgencyScore(conv);
-    if (score >= 4) return 'rgba(239,83,80,0.18)';
-    if (score === 3) return 'rgba(255,152,0,0.18)';
-    if (score === 2) return 'rgba(251,192,45,0.18)';
-    return 'rgba(76,175,80,0.18)';
+    if (score >= 4) return 'rgba(193,69,74,0.18)';
+    if (score === 3) return 'rgba(197,138,42,0.18)';
+    if (score === 2) return 'rgba(214,168,71,0.18)';
+    return 'rgba(61,139,109,0.18)';
   }
 
   tiempoRestante(conv: Conversacion): string {
