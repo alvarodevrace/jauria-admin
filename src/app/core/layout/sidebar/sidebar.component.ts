@@ -66,11 +66,6 @@ import { AuthService } from '../../auth/auth.service';
             <span>Pagos</span>
           </a>
 
-          <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
-            <i-lucide class="sidebar__item-icon" name="message" />
-            <span>Conversaciones WA</span>
-          </a>
-
           <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="settings-2" />
             <span>Configuración</span>
@@ -94,6 +89,11 @@ import { AuthService } from '../../auth/auth.service';
           <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="clipboard" />
             <span>Leads</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="message" />
+            <span>Conversaciones WA</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/workflows" routerLinkActive="active" (click)="close()">

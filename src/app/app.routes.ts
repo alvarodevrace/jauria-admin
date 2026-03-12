@@ -39,7 +39,7 @@ export const routes: Routes = [
       },
       {
         path: 'conversaciones',
-        canActivate: [roleGuard], data: { roles: ['coach', 'admin'] },
+        canActivate: [roleGuard], data: { roles: ['admin'] },
         loadComponent: () => import('./features/conversaciones/conversaciones.component').then(m => m.ConversacionesComponent),
       },
       {
