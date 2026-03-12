@@ -138,7 +138,7 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
         <div class="data-table-wrapper">
           <div class="novedades-empty">
             <div class="auth-state-icon auth-state-icon--warning">
-              <i-lucide name="newspaper" />
+              <i-lucide name="megaphone" />
             </div>
             <h4>No hay novedades para este filtro</h4>
             <p>Cuando el coach publique contenido nuevo aparecerá aquí automáticamente.</p>
