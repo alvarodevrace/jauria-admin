@@ -570,6 +570,12 @@ $topbar-height: 64px;
     width: 36px;
     height: 36px;
     min-width: 36px;
+    border: none;
+    background: transparent;
+
+    &:hover:not(:disabled) {
+      background: rgba(v.$color-white, 0.06);
+    }
   }
 
   &--icon-clean {

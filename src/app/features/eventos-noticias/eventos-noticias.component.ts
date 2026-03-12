@@ -195,7 +195,7 @@ interface ContenidoFormState {
           <div class="modal__header">
             <h3 class="modal__title">{{ form().id ? 'Editar contenido' : 'Nuevo contenido' }}</h3>
             <button class="btn btn--ghost btn--icon btn--icon-clean" (click)="closeEditorModal()" aria-label="Cerrar editor">
-              <i-lucide name="x" />
+              <i-lucide name="circle-x" />
             </button>
           </div>
           <div class="modal__body">
@@ -299,7 +299,7 @@ interface ContenidoFormState {
           <div class="modal__header">
             <h3 class="modal__title">{{ previewSelected()!.titulo }}</h3>
             <button class="btn btn--ghost btn--icon btn--icon-clean" (click)="previewSelected.set(null)" aria-label="Cerrar vista previa">
-              <i-lucide name="x" />
+              <i-lucide name="circle-x" />
             </button>
           </div>
           <div class="modal__body editorial-preview-modal__body">

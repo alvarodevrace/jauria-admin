@@ -185,8 +185,8 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
               </div>
               <h3 class="modal__title">{{ selectedItem()!.titulo }}</h3>
             </div>
-            <button class="btn btn--ghost btn--icon" (click)="selectedItem.set(null)">
-              <i-lucide name="x" />
+            <button class="btn btn--ghost btn--icon" (click)="selectedItem.set(null)" aria-label="Cerrar detalle">
+              <i-lucide name="circle-x" />
             </button>
           </div>
           <div class="modal__body novedades-modal__body">

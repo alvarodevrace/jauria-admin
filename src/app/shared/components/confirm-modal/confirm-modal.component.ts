@@ -18,7 +18,7 @@ import { ConfirmDialogService } from '../../../core/services/confirm-dialog.serv
               (click)="confirmDialog.cancel()"
               aria-label="Cerrar confirmación"
             >
-              <i-lucide name="x" />
+              <i-lucide name="circle-x" />
             </button>
           </div>
 
