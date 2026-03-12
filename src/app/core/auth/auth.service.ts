@@ -137,8 +137,20 @@ export class AuthService {
   }
 
   async logout() {
-    await this.resetLocalSession();
-    this.router.navigate(['/auth/login']);
+    this._session.set(null);
+    this._profile.set(null);
+    if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
+
+    try {
+      await this.supabase.signOut();
+    } catch (error) {
+      if (environment.sentryEnabled && environment.sentryDsn) {
+        Sentry.captureException(error);
+      }
+    } finally {
+      await this.supabase.clearLocalSession();
+      await this.router.navigate(['/auth/login'], { replaceUrl: true });
+    }
   }
 
   async getAccessToken(): Promise<string | null> {

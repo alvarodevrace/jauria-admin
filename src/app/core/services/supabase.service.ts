@@ -33,9 +33,11 @@ export class SupabaseService {
     );
   }
 
-  async clearLocalSession() {
-    await this.client.auth.signOut({ scope: 'local' });
+  async signOut() {
+    return this.client.auth.signOut();
+  }
 
+  async clearLocalSession() {
     if (typeof window === 'undefined') return;
 
     window.localStorage.removeItem(this.storageKey);
