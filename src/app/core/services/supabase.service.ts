@@ -242,7 +242,7 @@ export class SupabaseService {
 
   // ── Clases ────────────────────────────────────────────────────────────────
 
-  async getClases(filters?: { fecha?: string; tipo?: string; semana?: string }) {
+  async getClases(filters?: { fecha?: string; tipo?: string; formato?: string; semana?: string }) {
     let query = this.client
       .from('clases')
       .select('*, profiles(nombre_completo)')
@@ -252,6 +252,7 @@ export class SupabaseService {
 
     if (filters?.fecha)  query = query.eq('fecha', filters.fecha);
     if (filters?.tipo)   query = query.eq('tipo', filters.tipo);
+    if (filters?.formato) query = query.eq('wod_formato', filters.formato);
     if (filters?.semana) {
       // Filtra la semana: fecha entre lunes y domingo
       const [inicio, fin] = filters.semana.split(',');
@@ -338,7 +339,7 @@ export class SupabaseService {
 
   async getInscripcionesByUser(userId: string) {
     return this.client.from('inscripciones')
-      .select('*, clases(id, tipo, fecha, hora_inicio, hora_fin, capacidad_maxima, cancelada)')
+      .select('*, clases(id, tipo, fecha, hora_inicio, hora_fin, capacidad_maxima, cancelada, wod_formato, wod_plan, descripcion)')
       .eq('user_id', userId)
       .neq('estado', 'cancelado')
       .order('created_at', { ascending: false });

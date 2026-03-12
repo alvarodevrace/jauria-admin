@@ -19,6 +19,24 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+type WodFormat = 'AMRAP' | 'EMOM' | 'FOR TIME' | 'TABATA' | 'CHIPPER' | 'DEATH BY';
+type WodBlockKey = 'warmup' | 'accessories' | 'main';
+
+interface WodChip {
+  label: string;
+  tooltip?: string | null;
+}
+
+interface WodPlan {
+  warmup: WodChip[];
+  accessories: WodChip[];
+  main: {
+    format: WodFormat;
+    items: WodChip[];
+    notes?: string | null;
+  };
+}
+
 interface Clase {
   id: number;
   tipo: string;
@@ -29,6 +47,8 @@ interface Clase {
   capacidad_maxima: number;
   coach_id: string;
   cancelada: boolean;
+  wod_formato: WodFormat;
+  wod_plan: WodPlan;
   profiles?: { nombre_completo: string };
 }
 
@@ -48,15 +68,40 @@ interface MiInscripcion {
   clases?: {
     id: number;
     tipo: string;
+    descripcion: string;
     fecha: string;
     hora_inicio: string;
     hora_fin: string;
     capacidad_maxima: number;
     cancelada: boolean;
+    wod_formato: WodFormat;
+    wod_plan: WodPlan;
   };
 }
 
 type Vista = 'semana' | 'lista';
+
+interface ClaseFormState {
+  tipo: 'WOD';
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  capacidad_maxima: number;
+  descripcion: string;
+  wod_formato: WodFormat;
+  wod_plan: WodPlan;
+}
+
+const WOD_FORMAT_OPTIONS: WodFormat[] = ['AMRAP', 'EMOM', 'FOR TIME', 'TABATA', 'CHIPPER', 'DEATH BY'];
+
+const WOD_FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
+  AMRAP: 'Tantas rondas como sea posible dentro de un tiempo fijo.',
+  EMOM: 'Realizar una tarea cada minuto y descansar lo que sobre.',
+  'FOR TIME': 'Completar una tarea específica en el menor tiempo posible.',
+  TABATA: '20 segundos de esfuerzo máximo por 10 de descanso durante 8 series.',
+  CHIPPER: 'Lista larga de ejercicios que se completa uno tras otro hasta el final.',
+  'DEATH BY': 'Aumenta una repetición por minuto hasta no completar el trabajo dentro del minuto.',
+};
 
 const CLASE_THEME = {
   textStrong: '#f4f1eb',
@@ -100,7 +145,7 @@ const CLASE_THEME = {
           <div class="stat-card__label">Próxima clase inscrita</div>
           @if (proximaClaseInscrita()) {
             <div class="stat-card__value clases-athlete-summary__value">
-              {{ proximaClaseInscrita()!.tipo }}
+              {{ describeClase(proximaClaseInscrita()!) }}
             </div>
             <div class="stat-card__trend">
               {{ proximaClaseInscrita()!.fecha | dateEc: 'EEEE dd/MM' }}
@@ -190,9 +235,15 @@ const CLASE_THEME = {
                   <div class="week-event__time">
                     {{ clase.hora_inicio }} – {{ clase.hora_fin }}
                   </div>
-                  <div class="week-event__title">{{ clase.tipo }}</div>
-                  @if (clase.descripcion) {
-                    <div class="week-event__desc">{{ clase.descripcion }}</div>
+                  <div class="week-event__title">{{ describeClase(clase) }}</div>
+                  <div
+                    class="wod-format-chip"
+                    [title]="formatDescription(clase.wod_formato)"
+                  >
+                    {{ clase.wod_formato }}
+                  </div>
+                  @if (clasePreview(clase)) {
+                    <div class="week-event__desc">{{ clasePreview(clase) }}</div>
                   }
                   <div class="week-event__meta">
                     <span>{{ inscritosCount(clase.id) }}/{{ clase.capacidad_maxima }}</span>
@@ -221,14 +272,13 @@ const CLASE_THEME = {
           <span class="data-table-wrapper__title">Clases de la semana</span>
           <select
             class="form-control clases-filter-select"
-            [ngModel]="filterTipo()"
-            (ngModelChange)="onFilterTipoChange($event)"
+            [ngModel]="filterFormato()"
+            (ngModelChange)="onFilterFormatoChange($event)"
           >
-            <option value="">Todos los tipos</option>
-            <option value="WOD">WOD</option>
-            <option value="Open Gym">Open Gym</option>
-            <option value="Barbell Club">Barbell Club</option>
-            <option value="Fundamentos">Fundamentos</option>
+            <option value="">Todos los formatos</option>
+            @for (formatOption of wodFormatOptions; track formatOption) {
+              <option [value]="formatOption">{{ formatOption }}</option>
+            }
           </select>
         </div>
         @if (loading()) {
@@ -239,7 +289,7 @@ const CLASE_THEME = {
           <table class="data-table">
             <thead>
               <tr>
-                <th>Tipo</th>
+                <th>WOD</th>
                 <th>Fecha</th>
                 <th>Horario</th>
                 <th>Coach</th>
@@ -251,13 +301,21 @@ const CLASE_THEME = {
               @for (c of clasesVisibles(); track c.id) {
                 <tr [class.row-cancelled]="c.cancelada">
                   <td>
-                    <span
-                      class="class-type-pill"
-                      [style.background]="tipoBg(c.tipo)"
-                      [style.color]="tipoColor(c.tipo)"
-                    >
-                      {{ c.tipo }}
-                    </span>
+                    <div class="wod-table-cell">
+                      <span
+                        class="class-type-pill"
+                        [style.background]="tipoBg(c.tipo)"
+                        [style.color]="tipoColor(c.tipo)"
+                      >
+                        WOD
+                      </span>
+                      <span
+                        class="wod-format-chip wod-format-chip--compact"
+                        [title]="formatDescription(c.wod_formato)"
+                      >
+                        {{ c.wod_formato }}
+                      </span>
+                    </div>
                   </td>
                   <td class="clases-table-cell">
                     {{ c.fecha | dateEc: 'EEEE dd/MM' }}
@@ -341,19 +399,8 @@ const CLASE_THEME = {
             <form (ngSubmit)="crearClase()">
               <div class="two-column-grid">
                 <div class="form-group">
-                  <label class="form-label">Tipo *</label>
-                  <select
-                    class="form-control"
-                    [(ngModel)]="newClase.tipo"
-                    name="tipo"
-                    required
-                  >
-                    <option value="">Seleccionar</option>
-                    <option value="WOD">WOD</option>
-                    <option value="Open Gym">Open Gym</option>
-                    <option value="Barbell Club">Barbell Club</option>
-                    <option value="Fundamentos">Fundamentos</option>
-                  </select>
+                  <label class="form-label">Clase</label>
+                  <div class="clases-static-field">WOD</div>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Fecha *</label>
@@ -386,6 +433,21 @@ const CLASE_THEME = {
                   />
                 </div>
                 <div class="form-group">
+                  <label class="form-label">Formato del WOD *</label>
+                  <select
+                    class="form-control"
+                    [(ngModel)]="newClase.wod_formato"
+                    (ngModelChange)="onFormatChange($event)"
+                    name="wodFormato"
+                    required
+                  >
+                    @for (formatOption of wodFormatOptions; track formatOption) {
+                      <option [value]="formatOption">{{ formatOption }}</option>
+                    }
+                  </select>
+                  <small class="form-helper">{{ formatDescription(newClase.wod_formato) }}</small>
+                </div>
+                <div class="form-group">
                   <label class="form-label">Capacidad Máx.</label>
                   <input
                     class="form-control"
@@ -397,14 +459,104 @@ const CLASE_THEME = {
                   />
                 </div>
                 <div class="form-group clases-form-group--full">
-                  <label class="form-label">Descripción / WOD del día</label>
-                  <input
+                  <label class="form-label">Calentamiento</label>
+                  <div class="wod-chip-builder">
+                    <input
+                      class="form-control"
+                      type="text"
+                      [(ngModel)]="chipDrafts.warmup.label"
+                      name="warmupLabel"
+                      placeholder="Ej: 400m run"
+                    />
+                    <input
+                      class="form-control"
+                      type="text"
+                      [(ngModel)]="chipDrafts.warmup.tooltip"
+                      name="warmupTooltip"
+                      placeholder="Tooltip opcional"
+                    />
+                    <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('warmup')">Agregar</button>
+                  </div>
+                  <div class="wod-chip-list">
+                    @for (chip of newClase.wod_plan.warmup; track chip.label + $index) {
+                      <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('warmup', $index)">
+                        <span>{{ chip.label }}</span>
+                        <i-lucide name="x" />
+                      </button>
+                    } @empty {
+                      <div class="wod-empty-copy">Sin calentamiento cargado.</div>
+                    }
+                  </div>
+                </div>
+                <div class="form-group clases-form-group--full">
+                  <label class="form-label">Accesorios</label>
+                  <div class="wod-chip-builder">
+                    <input
+                      class="form-control"
+                      type="text"
+                      [(ngModel)]="chipDrafts.accessories.label"
+                      name="accessoryLabel"
+                      placeholder="Ej: 3x12 strict press"
+                    />
+                    <input
+                      class="form-control"
+                      type="text"
+                      [(ngModel)]="chipDrafts.accessories.tooltip"
+                      name="accessoryTooltip"
+                      placeholder="Tooltip opcional"
+                    />
+                    <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('accessories')">Agregar</button>
+                  </div>
+                  <div class="wod-chip-list">
+                    @for (chip of newClase.wod_plan.accessories; track chip.label + $index) {
+                      <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('accessories', $index)">
+                        <span>{{ chip.label }}</span>
+                        <i-lucide name="x" />
+                      </button>
+                    } @empty {
+                      <div class="wod-empty-copy">Sin accesorios cargados.</div>
+                    }
+                  </div>
+                </div>
+                <div class="form-group clases-form-group--full">
+                  <label class="form-label">WOD central</label>
+                  <div class="wod-chip-builder">
+                    <input
+                      class="form-control"
+                      type="text"
+                      [(ngModel)]="chipDrafts.main.label"
+                      name="mainLabel"
+                      placeholder="Ej: 12 thrusters + 12 pull-ups"
+                    />
+                    <input
+                      class="form-control"
+                      type="text"
+                      [(ngModel)]="chipDrafts.main.tooltip"
+                      name="mainTooltip"
+                      placeholder="Tooltip opcional"
+                    />
+                    <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('main')">Agregar</button>
+                  </div>
+                  <div class="wod-chip-list">
+                    @for (chip of newClase.wod_plan.main.items; track chip.label + $index) {
+                      <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('main', $index)">
+                        <span>{{ chip.label }}</span>
+                        <i-lucide name="x" />
+                      </button>
+                    } @empty {
+                      <div class="wod-empty-copy">Agrega al menos un bloque al WOD central.</div>
+                    }
+                  </div>
+                </div>
+                <div class="form-group clases-form-group--full">
+                  <label class="form-label">Notas del WOD</label>
+                  <textarea
                     class="form-control"
-                    type="text"
-                    [(ngModel)]="newClase.descripcion"
-                    name="desc"
-                    placeholder="Ej: 3 rounds: 10 thrusters, 10 pull-ups..."
-                  />
+                    [(ngModel)]="newClase.wod_plan.main.notes"
+                    name="wodNotes"
+                    rows="3"
+                    placeholder="Escalas, score target o aclaraciones del día."
+                  ></textarea>
                 </div>
               </div>
               <div class="modal__footer clases-modal-footer">
@@ -435,7 +587,7 @@ const CLASE_THEME = {
         <div class="modal modal--wide" (click)="$event.stopPropagation()">
           <div class="modal__header">
             <h3 class="modal__title">
-              {{ claseSeleccionada()!.tipo }}
+              {{ describeClase(claseSeleccionada()!) }}
               <span class="modal__title-meta">
                 · {{ claseSeleccionada()!.fecha | dateEc: 'EEEE dd/MM' }}
                 {{ claseSeleccionada()!.hora_inicio }} –
@@ -450,14 +602,61 @@ const CLASE_THEME = {
             </button>
           </div>
           <div class="modal__body">
-            @if (claseSeleccionada()!.descripcion) {
-              <div class="alert alert--info clases-description-alert">
-                <div class="clases-description-alert__body">
-                  <i-lucide name="clipboard" />
-                  <span>{{ claseSeleccionada()!.descripcion }}</span>
+            <div class="wod-detail">
+              <div class="wod-detail__header">
+                <span
+                  class="wod-format-chip wod-format-chip--strong"
+                  [title]="formatDescription(claseSeleccionada()!.wod_formato)"
+                >
+                  {{ claseSeleccionada()!.wod_formato }}
+                </span>
+                <span class="wod-detail__format-copy">
+                  {{ formatDescription(claseSeleccionada()!.wod_formato) }}
+                </span>
+              </div>
+
+              @if (claseSeleccionada()!.wod_plan.warmup.length > 0) {
+                <div class="wod-detail__section">
+                  <div class="wod-detail__label">Calentamiento</div>
+                  <div class="wod-detail__chips">
+                    @for (chip of claseSeleccionada()!.wod_plan.warmup; track chip.label + $index) {
+                      <span class="wod-detail__chip" [title]="chipTooltip(chip)">{{ chip.label }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (claseSeleccionada()!.wod_plan.accessories.length > 0) {
+                <div class="wod-detail__section">
+                  <div class="wod-detail__label">Accesorios</div>
+                  <div class="wod-detail__chips">
+                    @for (chip of claseSeleccionada()!.wod_plan.accessories; track chip.label + $index) {
+                      <span class="wod-detail__chip" [title]="chipTooltip(chip)">{{ chip.label }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <div class="wod-detail__section">
+                <div class="wod-detail__label">WOD central</div>
+                <div class="wod-detail__chips">
+                  @for (chip of claseSeleccionada()!.wod_plan.main.items; track chip.label + $index) {
+                    <span class="wod-detail__chip wod-detail__chip--primary" [title]="chipTooltip(chip)">{{ chip.label }}</span>
+                  } @empty {
+                    <div class="wod-empty-copy">Sin ejercicios cargados todavía.</div>
+                  }
                 </div>
               </div>
-            }
+
+              @if (claseSeleccionada()!.wod_plan.main.notes) {
+                <div class="alert alert--info clases-description-alert">
+                  <div class="clases-description-alert__body">
+                    <i-lucide name="clipboard" />
+                    <span>{{ claseSeleccionada()!.wod_plan.main.notes }}</span>
+                  </div>
+                </div>
+              }
+            </div>
 
             <div class="clases-modal-summary">
               <span class="modal__section-title">
@@ -599,9 +798,123 @@ const CLASE_THEME = {
       .clases-form-group--full {
         grid-column: 1 / -1;
       }
+      .clases-static-field {
+        min-height: 42px;
+        border: 1px solid #2b3033;
+        border-radius: 10px;
+        background: #1d2022;
+        color: #f4f1eb;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .form-helper {
+        color: #938c84;
+        font-size: 12px;
+        line-height: 1.4;
+      }
       .clases-modal-footer {
         margin-top: 20px;
         padding: 0;
+      }
+      .wod-table-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .wod-format-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(166, 31, 36, 0.28);
+        background: rgba(166, 31, 36, 0.14);
+        color: #f4f1eb;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .wod-format-chip--compact {
+        padding: 4px 8px;
+        font-size: 10px;
+      }
+      .wod-format-chip--strong {
+        background: rgba(166, 31, 36, 0.2);
+        border-color: rgba(166, 31, 36, 0.42);
+      }
+      .wod-chip-builder {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto;
+        gap: 10px;
+      }
+      .wod-chip-list,
+      .wod-detail__chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .wod-empty-copy {
+        color: #938c84;
+        font-size: 13px;
+      }
+      .wod-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+      .wod-detail__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .wod-detail__format-copy {
+        color: #d2cbc1;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .wod-detail__section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .wod-detail__label {
+        color: #938c84;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .wod-detail__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(244, 241, 235, 0.06);
+        border: 1px solid rgba(244, 241, 235, 0.08);
+        color: #f4f1eb;
+        font-size: 13px;
+        line-height: 1.3;
+      }
+      .wod-detail__chip--primary {
+        background: rgba(166, 31, 36, 0.14);
+        border-color: rgba(166, 31, 36, 0.28);
+      }
+      .wod-detail__chip--editable {
+        cursor: pointer;
+      }
+      .wod-detail__chip--editable i-lucide {
+        width: 12px;
+        height: 12px;
       }
       .week-calendar {
         background: #151718;
@@ -773,18 +1086,6 @@ const CLASE_THEME = {
         background: rgba(166, 31, 36, 0.24);
         border-left-color: #a61f24;
       }
-      .week-event--open-gym {
-        background: rgba(147, 140, 132, 0.18);
-        border-left-color: #938c84;
-      }
-      .week-event--barbell-club {
-        background: rgba(193, 42, 48, 0.18);
-        border-left-color: #c12a30;
-      }
-      .week-event--fundamentos {
-        background: rgba(61, 110, 145, 0.16);
-        border-left-color: #3d6e91;
-      }
       .row-cancelled td {
         opacity: 0.5;
         text-decoration: line-through;
@@ -804,6 +1105,9 @@ const CLASE_THEME = {
         .clases-modal-summary {
           flex-direction: column;
           align-items: stretch;
+        }
+        .wod-chip-builder {
+          grid-template-columns: 1fr;
         }
       }
     `,
@@ -833,7 +1137,13 @@ export class ClasesComponent implements OnInit {
   vista = signal<Vista>('semana');
   showFormClase = signal(false);
   claseSeleccionada = signal<Clase | null>(null);
-  filterTipo = signal('');
+  filterFormato = signal('');
+  readonly wodFormatOptions = WOD_FORMAT_OPTIONS;
+  chipDrafts = {
+    warmup: { label: '', tooltip: '' },
+    accessories: { label: '', tooltip: '' },
+    main: { label: '', tooltip: '' },
+  };
 
   // Semana actual
   private semanaBase = signal(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -858,9 +1168,9 @@ export class ClasesComponent implements OnInit {
   });
 
   clasesFiltradas = computed(() => {
-    const tipo = this.filterTipo();
-    if (!tipo) return this.clases();
-    return this.clases().filter((clase) => clase.tipo === tipo);
+    const formato = this.filterFormato();
+    if (!formato) return this.clases();
+    return this.clases().filter((clase) => clase.wod_formato === formato);
   });
 
   clasesVisibles = computed(() =>
@@ -886,7 +1196,7 @@ export class ClasesComponent implements OnInit {
       ).length,
   );
 
-  newClase = this.emptyClase();
+  newClase: ClaseFormState = this.emptyClase();
 
   async ngOnInit() {
     await Promise.all([
@@ -962,20 +1272,30 @@ export class ClasesComponent implements OnInit {
       this.toast.error('Error cargando clases');
       return;
     }
-    const clases = (data ?? []) as unknown as Clase[];
+    const clases = ((data ?? []) as unknown as Clase[]).map((clase) => this.normalizeClase(clase));
     this.clases.set(clases);
     await this.cargarResumenInscritos(clases);
   }
 
-  onFilterTipoChange(tipo: string) {
-    this.filterTipo.set(tipo);
+  onFilterFormatoChange(formato: string) {
+    this.filterFormato.set(formato);
+  }
+
+  onFormatChange(formato: WodFormat) {
+    this.newClase.wod_formato = formato;
+    this.newClase.wod_plan.main.format = formato;
   }
 
   async cargarMisInscripciones() {
     const userId = this.auth.currentUser()?.id;
     if (!userId) return;
     const { data } = await this.supabase.getInscripcionesByUser(userId);
-    const inscripciones = (data ?? []) as unknown as MiInscripcion[];
+    const inscripciones = ((data ?? []) as unknown as MiInscripcion[]).map((inscripcion) => ({
+      ...inscripcion,
+      clases: inscripcion.clases
+        ? this.normalizeClase(inscripcion.clases as unknown as Clase)
+        : inscripcion.clases,
+    }));
     const futuras = inscripciones.filter((inscripcion) =>
       Boolean(
         inscripcion.clases &&
@@ -1051,15 +1371,24 @@ export class ClasesComponent implements OnInit {
 
   abrirFormClase() {
     this.newClase = this.emptyClase();
+    this.resetChipDrafts();
     this.showFormClase.set(true);
   }
 
   async crearClase() {
-    if (!this.newClase.tipo || !this.newClase.fecha) return;
+    if (!this.newClase.fecha || this.newClase.wod_plan.main.items.length === 0) {
+      this.toast.warning('Agrega al menos un ejercicio al WOD central.');
+      return;
+    }
+
     this.savingClase.set(true);
     const coachId = this.auth.currentUser()?.id;
     const { error } = await this.supabase.createClase({
       ...this.newClase,
+      tipo: 'WOD',
+      descripcion: this.buildDescription(this.newClase.wod_plan),
+      wod_formato: this.newClase.wod_formato,
+      wod_plan: this.newClase.wod_plan,
       coach_id: coachId,
     });
     this.savingClase.set(false);
@@ -1068,9 +1397,10 @@ export class ClasesComponent implements OnInit {
       this.toast.error(error.message);
       return;
     }
-    this.toast.success('Clase creada');
+    this.toast.success('WOD creado');
     this.showFormClase.set(false);
     this.newClase = this.emptyClase();
+    this.resetChipDrafts();
     await this.cargarClases();
   }
 
@@ -1212,7 +1542,7 @@ export class ClasesComponent implements OnInit {
   async eliminarClase(clase: Clase) {
     const confirmacion = await this.confirmDialog.open({
       title: 'Eliminar clase',
-      message: `Se eliminará "${clase.tipo}" del ${clase.fecha} a las ${clase.hora_inicio}. También se quitarán sus inscripciones.`,
+      message: `Se eliminará "${this.describeClase(clase)}" del ${clase.fecha} a las ${clase.hora_inicio}. También se quitarán sus inscripciones.`,
       confirmLabel: 'Sí, eliminar',
       cancelLabel: 'No, cancelar',
       tone: 'danger',
@@ -1261,9 +1591,6 @@ export class ClasesComponent implements OnInit {
       (
         {
           WOD: CLASE_THEME.primarySoftStrong,
-          'Open Gym': CLASE_THEME.neutralSoftStrong,
-          'Barbell Club': CLASE_THEME.accentSoftStrong,
-          Fundamentos: CLASE_THEME.infoSoft,
         } as Record<string, string>
       )[tipo] ?? CLASE_THEME.neutralSoft
     );
@@ -1274,9 +1601,6 @@ export class ClasesComponent implements OnInit {
       (
         {
           WOD: CLASE_THEME.primary,
-          'Open Gym': CLASE_THEME.textStrong,
-          'Barbell Club': CLASE_THEME.accent,
-          Fundamentos: CLASE_THEME.info,
         } as Record<string, string>
       )[tipo] ?? CLASE_THEME.textMuted
     );
@@ -1286,14 +1610,159 @@ export class ClasesComponent implements OnInit {
     return tipo.toLowerCase().replace(/\s+/g, '-');
   }
 
-  private emptyClase() {
+  formatDescription(formatOption: WodFormat): string {
+    return WOD_FORMAT_DESCRIPTIONS[formatOption];
+  }
+
+  chipTooltip(chip: WodChip): string {
+    return chip.tooltip?.trim() || chip.label;
+  }
+
+  describeClase(clase: Pick<Clase, 'tipo' | 'wod_formato'>): string {
+    return `${clase.tipo} · ${clase.wod_formato}`;
+  }
+
+  clasePreview(clase: Pick<Clase, 'wod_plan'>): string {
+    const warmup = clase.wod_plan.warmup.map((chip) => chip.label);
+    const accessories = clase.wod_plan.accessories.map((chip) => chip.label);
+    const main = clase.wod_plan.main.items.map((chip) => chip.label);
+    return [...warmup, ...accessories, ...main].slice(0, 3).join(' · ');
+  }
+
+  addChip(block: WodBlockKey) {
+    const draft = this.chipDrafts[block];
+    const label = draft.label.trim();
+    if (!label) return;
+
+    const item: WodChip = {
+      label,
+      tooltip: draft.tooltip.trim() || null,
+    };
+
+    if (block === 'main') {
+      this.newClase.wod_plan.main.items = [...this.newClase.wod_plan.main.items, item];
+    } else {
+      const currentList = block === 'warmup'
+        ? this.newClase.wod_plan.warmup
+        : this.newClase.wod_plan.accessories;
+      const nextList = [...currentList, item];
+
+      if (block === 'warmup') {
+        this.newClase.wod_plan.warmup = nextList;
+      } else {
+        this.newClase.wod_plan.accessories = nextList;
+      }
+    }
+
+    this.chipDrafts[block] = { label: '', tooltip: '' };
+  }
+
+  removeChip(block: WodBlockKey, index: number) {
+    if (block === 'main') {
+      this.newClase.wod_plan.main.items = this.newClase.wod_plan.main.items.filter((_, itemIndex) => itemIndex !== index);
+      return;
+    }
+
+    const currentList = block === 'warmup'
+      ? this.newClase.wod_plan.warmup
+      : this.newClase.wod_plan.accessories;
+    const nextList = currentList.filter((_, itemIndex) => itemIndex !== index);
+
+    if (block === 'warmup') {
+      this.newClase.wod_plan.warmup = nextList;
+    } else {
+      this.newClase.wod_plan.accessories = nextList;
+    }
+  }
+
+  private buildDescription(plan: WodPlan) {
+    const labels = plan.main.items.map((item) => item.label).join(' · ');
+    return plan.main.notes?.trim() || (labels ? `${plan.main.format}: ${labels}` : plan.main.format);
+  }
+
+  private normalizeClase<T extends Partial<Clase>>(clase: T): T & Pick<Clase, 'tipo' | 'wod_formato' | 'wod_plan' | 'descripcion'> {
+    const rawPlan = clase.wod_plan as WodPlan | null | undefined;
+    const mainFormat = rawPlan?.main?.format ?? clase.wod_formato ?? 'FOR TIME';
+
     return {
-      tipo: '',
+      ...clase,
+      tipo: 'WOD',
+      wod_formato: mainFormat,
+      descripcion: clase.descripcion ?? '',
+      wod_plan: {
+        warmup: this.normalizeChipList(rawPlan?.warmup),
+        accessories: this.normalizeChipList(rawPlan?.accessories),
+        main: {
+          format: mainFormat,
+          items: this.normalizeChipList(rawPlan?.main?.items),
+          notes: rawPlan?.main?.notes ?? clase.descripcion ?? '',
+        },
+      },
+    };
+  }
+
+  private normalizeChipList(list: WodChip[] | undefined | null): WodChip[] {
+    return (list ?? [])
+      .map((chip) => ({
+        label: chip?.label?.trim() ?? '',
+        tooltip: chip?.tooltip?.trim() || null,
+      }))
+      .filter((chip) => chip.label.length > 0);
+  }
+
+  private emptyClase(): ClaseFormState {
+    const now = new Date();
+    const startAt = this.roundToNextHalfHour(now);
+    const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+
+    return {
+      tipo: 'WOD',
       fecha: format(new Date(), 'yyyy-MM-dd'),
-      hora_inicio: '06:00',
-      hora_fin: '07:00',
+      hora_inicio: this.formatTime(startAt),
+      hora_fin: this.formatTime(endAt),
       capacidad_maxima: 20,
       descripcion: '',
+      wod_formato: 'FOR TIME' as WodFormat,
+      wod_plan: {
+        warmup: [],
+        accessories: [],
+        main: {
+          format: 'FOR TIME' as WodFormat,
+          items: [],
+          notes: '',
+        },
+      },
     };
+  }
+
+  private resetChipDrafts() {
+    this.chipDrafts = {
+      warmup: { label: '', tooltip: '' },
+      accessories: { label: '', tooltip: '' },
+      main: { label: '', tooltip: '' },
+    };
+  }
+
+  private roundToNextHalfHour(date: Date): Date {
+    const next = new Date(date);
+    next.setSeconds(0, 0);
+
+    const minutes = next.getMinutes();
+
+    if (minutes === 0 || minutes === 30) {
+      return next;
+    }
+
+    if (minutes < 30) {
+      next.setMinutes(30);
+      return next;
+    }
+
+    next.setHours(next.getHours() + 1, 0, 0, 0);
+    return next;
+  }
+
+  private formatTime(date: Date): string {
+    return format(date, 'HH:mm');
   }
 }

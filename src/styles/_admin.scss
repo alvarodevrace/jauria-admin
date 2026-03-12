@@ -645,6 +645,33 @@ $topbar-height: 64px;
   &.error {
     border-color: v.$color-danger;
   }
+
+  &[type='date'],
+  &[type='time'],
+  &[type='datetime-local'] {
+    color-scheme: dark;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+
+    &::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.88;
+      filter: invert(1) brightness(0.9);
+    }
+
+    &::-webkit-datetime-edit,
+    &::-webkit-datetime-edit-fields-wrapper,
+    &::-webkit-datetime-edit-text,
+    &::-webkit-datetime-edit-month-field,
+    &::-webkit-datetime-edit-day-field,
+    &::-webkit-datetime-edit-year-field,
+    &::-webkit-datetime-edit-hour-field,
+    &::-webkit-datetime-edit-minute-field,
+    &::-webkit-datetime-edit-ampm-field {
+      color: v.$color-white;
+      font-weight: 700;
+    }
+  }
 }
 
 .form-error {
