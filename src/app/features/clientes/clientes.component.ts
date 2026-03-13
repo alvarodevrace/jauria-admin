@@ -1,11 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
-import { AdminPaymentsService } from '../../core/services/admin-payments.service';
-import { N8nService } from '../../core/services/n8n.service';
+import { ClientsService } from '../../core/services/clients.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -56,7 +55,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Todos los Clientes</span>
         <div class="toolbar-row">
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div class="toolbar-group">
             <button class="btn btn--sm" [class.btn--primary]="view() === 'operativos'" [class.btn--ghost]="view() !== 'operativos'" (click)="setView('operativos')">Operativos</button>
             <button class="btn btn--sm" [class.btn--primary]="view() === 'inactivos'" [class.btn--ghost]="view() !== 'inactivos'" (click)="setView('inactivos')">Inactivos</button>
             <button class="btn btn--sm" [class.btn--primary]="view() === 'todos'" [class.btn--ghost]="view() !== 'todos'" (click)="setView('todos')">Todos</button>
@@ -84,7 +83,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       @if (loading()) {
         <div style="padding:40px;text-align:center;color:#938C84;">Cargando clientes...</div>
       } @else {
-        <table class="data-table">
+        <table class="data-table data-table--stacked-mobile">
           <thead>
             <tr>
               <th>Cliente</th>
@@ -99,39 +98,34 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
           <tbody>
             @for (c of filtered(); track c.id_cliente) {
               <tr>
-                <td>
-                  <div style="font-weight:600;color:#f4f1eb;">{{ c.nombre_completo }}</div>
-                  <div style="font-size:11px;color:#938C84;margin-top:2px;">{{ c.email }}</div>
-                  <div style="font-size:11px;color:#938C84;">{{ c.telefono_whatsapp }}</div>
+                <td class="data-table__cell--primary" data-label="">
+                  <div class="mobile-primary">{{ c.nombre_completo }}</div>
+                  <div class="mobile-secondary" style="margin-top:2px;">{{ c.email }}</div>
+                  <div class="mobile-secondary">{{ displayPhone(c.telefono_whatsapp) }}</div>
                 </td>
-                <td>
+                <td data-label="Plan">
                   <span class="badge badge--{{ c.plan.toLowerCase() }}">
                     {{ c.plan | planLabel : c.monto_plan }}
                   </span>
                 </td>
-                <td>
+                <td data-label="Estado">
                   <span class="badge badge--{{ c.estado.toLowerCase() }}">{{ c.estado }}</span>
                 </td>
-                <td style="font-size:13px;">{{ c.metodo_pago }}</td>
-                <td>
+                <td data-label="Método" style="font-size:13px;">{{ c.metodo_pago }}</td>
+                <td data-label="Vencimiento">
                   <span [style.color]="diasColor(c.fecha_vencimiento)" style="font-size:13px;">
                     {{ c.fecha_vencimiento | dateEc }}
                   </span>
                   <div style="font-size:11px;color:#938C84;">{{ diasRestantes(c.fecha_vencimiento) }}</div>
                 </td>
-                <td style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
-                <td>
-                  <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="confirmarEdicion(c)"><i-lucide name="pencil" /></button>
+                <td data-label="Último pago" style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
+                <td class="data-table__cell--actions" data-label="Acciones">
+                  <div class="data-table__actions mobile-actions" style="justify-content:flex-end;flex-wrap:wrap;">
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
                     <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-lucide name="clipboard" /></button>
                     <button class="btn btn--ghost btn--sm btn--icon" title="Enviar recordatorio WhatsApp" aria-label="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)" [disabled]="loadingAccion() === c.id_cliente + '_rec'">
                       @if (loadingAccion() === c.id_cliente + '_rec') { ... } @else { <i-lucide name="send" /> }
                     </button>
-                    @if (c.metodo_pago === 'PAYPHONE' || c.plan !== 'MENSUAL') {
-                      <button class="btn btn--ghost btn--sm btn--icon" title="Generar link Payphone" aria-label="Generar link Payphone" (click)="generarLinkPayphone(c)" [disabled]="loadingAccion() === c.id_cliente + '_pay'">
-                        @if (loadingAccion() === c.id_cliente + '_pay') { ... } @else { <i-lucide name="link" /> }
-                      </button>
-                    }
                     <button
                       class="btn btn--sm"
                       [class.btn--danger]="c.estado !== 'Inactivo'"
@@ -181,7 +175,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
 
                 <div class="form-group">
                   <label class="form-label">Teléfono WhatsApp *</label>
-                  <input class="form-control" type="text" [(ngModel)]="form.telefono_whatsapp" name="tel" required placeholder="593987654321" />
+                  <input class="form-control" type="text" [(ngModel)]="form.telefono_whatsapp" name="tel" required placeholder="0987654321" />
                 </div>
 
                 <div class="form-group">
@@ -207,15 +201,22 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
                   </select>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">Estado</label>
-                  <select class="form-control" [(ngModel)]="form.estado" name="estado">
-                    <option value="Activo">Activo</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Vencido">Vencido</option>
-                    <option value="Inactivo">Inactivo</option>
-                  </select>
-                </div>
+                @if (modalMode() === 'editar') {
+                  <div class="form-group">
+                    <label class="form-label">Estado</label>
+                    <select class="form-control" [(ngModel)]="form.estado" name="estado">
+                      <option value="Activo">Activo</option>
+                      <option value="Pendiente">Pendiente</option>
+                      <option value="Vencido">Vencido</option>
+                      <option value="Inactivo">Inactivo</option>
+                    </select>
+                  </div>
+                } @else {
+                  <div class="form-group">
+                    <label class="form-label">Estado inicial</label>
+                    <input class="form-control" type="text" value="Pendiente" readonly />
+                  </div>
+                }
 
                 <div class="form-group">
                   <label class="form-label">Fecha Inicio *</label>
@@ -231,7 +232,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
 
               @if (modalMode() === 'crear') {
                 <div class="alert alert--info" style="margin-top:8px;">
-                  El ID de cliente se generará automáticamente (formato C001, C002...).
+                  El ID de cliente se generará automáticamente (formato C001, C002...) y el estado inicial será Pendiente.
                 </div>
               }
 
@@ -291,8 +292,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
 export class ClientesComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private confirmDialog = inject(ConfirmDialogService);
-  private adminPayments = inject(AdminPaymentsService);
-  private n8n = inject(N8nService);
+  private clientsService = inject(ClientsService);
   private sentry = inject(SentryService);
   private toast = inject(ToastService);
 
@@ -341,6 +341,7 @@ export class ClientesComponent implements OnInit {
         c.nombre_completo.toLowerCase().includes(t) ||
         c.email.toLowerCase().includes(t) ||
         c.telefono_whatsapp.includes(t) ||
+        this.toLocalPhone(c.telefono_whatsapp).includes(t) ||
         c.id_cliente.toLowerCase().includes(t)
       );
     }
@@ -382,7 +383,7 @@ export class ClientesComponent implements OnInit {
     this.modalError.set('');
     if (mode === 'editar' && cliente) {
       this.editingId = cliente.id_cliente;
-      this.form = { ...cliente };
+      this.form = { ...cliente, telefono_whatsapp: this.toLocalPhone(cliente.telefono_whatsapp) };
     } else {
       this.editingId = '';
       this.form = this.emptyForm();
@@ -393,19 +394,6 @@ export class ClientesComponent implements OnInit {
     this.modalMode.set(null);
     this.editingId = '';
     this.form = this.emptyForm();
-  }
-
-  async confirmarEdicion(cliente: Cliente) {
-    const confirmed = await this.confirmDialog.open({
-      title: 'Editar cliente',
-      message: `Vas a editar los datos de ${cliente.nombre_completo}.`,
-      confirmLabel: 'Editar cliente',
-      cancelLabel: 'Cancelar',
-      tone: 'primary',
-    });
-
-    if (!confirmed) return;
-    this.abrirModal('editar', cliente);
   }
 
   onPlanChange() {
@@ -444,16 +432,18 @@ export class ClientesComponent implements OnInit {
 
     this.guardando.set(true);
     this.modalError.set('');
+    const telefonoNormalizado = this.normalizePhoneForStorage(String(this.form.telefono_whatsapp ?? ''));
 
     if (this.modalMode() === 'crear') {
       // Generar ID
       const idCliente = await this.generarIdCliente();
-      const payload = { ...this.form, id_cliente: idCliente };
+      const payload = { ...this.form, id_cliente: idCliente, telefono_whatsapp: telefonoNormalizado, estado: 'Pendiente' };
       const { error } = await this.supabase.createCliente(payload);
       if (error) { this.modalError.set(error.message); this.guardando.set(false); return; }
       this.toast.success(`Cliente ${idCliente} creado`);
     } else {
-      const { error } = await this.supabase.updateCliente(this.editingId, this.form);
+      const payload = { ...this.form, telefono_whatsapp: telefonoNormalizado };
+      const { error } = await this.supabase.updateCliente(this.editingId, payload);
       if (error) { this.modalError.set(error.message); this.guardando.set(false); return; }
       this.toast.success('Cliente actualizado');
     }
@@ -474,39 +464,17 @@ export class ClientesComponent implements OnInit {
   async enviarRecordatorio(c: Cliente) {
     this.loadingAccion.set(c.id_cliente + '_rec');
     try {
-      await firstValueFrom(this.n8n.runWorkflow('GzmYUYGMG1X8wnTm', { id_cliente: c.id_cliente }));
+      await firstValueFrom(
+        this.clientsService.sendReminder(c.id_cliente).pipe(timeout(15000))
+      );
 
       this.toast.success(`Recordatorio enviado a ${c.nombre_completo}`);
     } catch (error) {
-      this.sentry.captureError(error, { action: 'runReminderWorkflow', idCliente: c.id_cliente });
+      this.sentry.captureError(error, { action: 'sendClientReminder', idCliente: c.id_cliente });
       this.toast.error('No se pudo ejecutar el flujo desde el backend');
+    } finally {
+      this.loadingAccion.set('');
     }
-    this.loadingAccion.set('');
-  }
-
-  async generarLinkPayphone(c: Cliente) {
-    this.loadingAccion.set(c.id_cliente + '_pay');
-    try {
-      const data = await firstValueFrom(this.adminPayments.createPayphoneLink({
-        idCliente: c.id_cliente,
-        montoCentavos: Math.round(c.monto_plan * 100),
-        referencia: `Pago ${c.plan} ${c.nombre_completo}`,
-      }));
-
-      const link = data.paymentUrl ?? data.link ?? '';
-      if (link) {
-        await this.supabase.updateCliente(c.id_cliente, { link_pago_actual: link });
-        this.toast.success('Link Payphone generado y guardado');
-        await this.cargarClientes();
-      } else {
-        this.toast.warning('Link generado pero URL no encontrada en respuesta');
-      }
-    } catch (error) {
-      this.sentry.captureError(error, { action: 'createPayphoneLink', idCliente: c.id_cliente });
-      const message = (error as { error?: { message?: string } })?.error?.message ?? 'No se pudo generar el link Payphone desde el backend';
-      this.toast.error(message);
-    }
-    this.loadingAccion.set('');
   }
 
   async verHistorial(idCliente: string) {
@@ -557,6 +525,41 @@ export class ClientesComponent implements OnInit {
     }
   }
 
+  displayPhone(phone: string): string {
+    return this.toLocalPhone(phone);
+  }
+
+  private toLocalPhone(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('593') && digits.length === 12) {
+      return `0${digits.slice(3)}`;
+    }
+
+    if (digits.startsWith('9') && digits.length === 9) {
+      return `0${digits}`;
+    }
+
+    return digits || phone;
+  }
+
+  private normalizePhoneForStorage(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+
+    if (digits.startsWith('593') && digits.length === 12) {
+      return digits;
+    }
+
+    if (digits.startsWith('09') && digits.length === 10) {
+      return `593${digits.slice(1)}`;
+    }
+
+    if (digits.startsWith('9') && digits.length === 9) {
+      return `593${digits}`;
+    }
+
+    return digits;
+  }
+
   private emptyForm(): Partial<Cliente> & Record<string, unknown> {
     return {
       nombre_completo: '',
@@ -565,7 +568,7 @@ export class ClientesComponent implements OnInit {
       plan: '',
       monto_plan: 0,
       metodo_pago: 'TRANSFERENCIA',
-      estado: 'Activo',
+      estado: 'Pendiente',
       fecha_inicio: getEcuadorTodayYmd(),
       fecha_vencimiento: '',
     };

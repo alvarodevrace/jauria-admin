@@ -46,7 +46,7 @@ interface Profile {
       @if (loading()) {
         <div style="padding:40px;text-align:center;color:#938c84;">Cargando...</div>
       } @else {
-        <table class="data-table">
+        <table class="data-table data-table--stacked-mobile">
           <thead>
             <tr>
               <th>Usuario</th>
@@ -63,7 +63,7 @@ interface Profile {
           <tbody>
             @for (p of filtered(); track p.id) {
               <tr>
-                <td>
+                <td class="data-table__cell--primary" data-label="">
                   <div style="display:flex;align-items:center;gap:10px;">
                     <div style="width:32px;height:32px;background:#A61F24;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#f4f1eb;flex-shrink:0;">
                       {{ p.nombre_completo[0] }}
@@ -71,21 +71,21 @@ interface Profile {
                     <span style="font-weight:600;color:#f4f1eb;">{{ p.nombre_completo }}</span>
                   </div>
                 </td>
-                <td style="font-size:13px;color:#d2cbc1;">{{ p.email }}</td>
-                <td>
+                <td data-label="Email" style="font-size:13px;color:#d2cbc1;">{{ p.email }}</td>
+                <td data-label="Rol actual">
                   <span class="badge badge--{{ rolBadge(p.rol) }}">{{ p.rol }}</span>
                 </td>
-                <td style="font-size:12px;color:#938c84;">{{ p.created_at | dateEc }}</td>
-                <td>
+                <td data-label="Creado" style="font-size:12px;color:#938c84;">{{ p.created_at | dateEc }}</td>
+                <td data-label="Activo">
                   <span style="display:inline-flex;align-items:center;gap:8px;" [style.color]="p.activo ? '#3D8B6D' : '#938C84'">
                     <i-lucide [name]="p.activo ? 'circle-check' : 'circle-x'"></i-lucide>
                     {{ p.activo ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
                 @if (canManageRoles()) {
-                  <td>
+                  <td data-label="Cambiar rol">
                     @if (p.id !== currentUserId()) {
-                      <div style="display:flex;gap:8px;align-items:center;">
+                      <div class="mobile-actions" style="display:flex;gap:8px;align-items:center;">
                         <select
                           class="form-control"
                           style="width:auto;height:34px;font-size:12px;"
@@ -106,9 +106,9 @@ interface Profile {
                     }
                   </td>
                 }
-                <td>
+                <td class="data-table__cell--actions" data-label="Acciones">
                   @if (canToggleProfile(p)) {
-                    <div style="display:flex;gap:8px;align-items:center;">
+                    <div class="data-table__actions mobile-actions" style="align-items:center;">
                       <button
                         class="btn btn--sm"
                         [class.btn--danger]="p.activo"

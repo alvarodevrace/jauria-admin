@@ -75,7 +75,7 @@ interface Pago {
           Cargando...
         </div>
       } @else {
-        <table class="data-table">
+        <table class="data-table data-table--stacked-mobile">
           <thead>
             <tr>
               <th>Fecha</th>
@@ -90,22 +90,22 @@ interface Pago {
           <tbody>
             @for (p of filtered(); track p.id) {
               <tr>
-                <td style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
-                <td>
-                  <div style="font-weight:600;color:#f4f1eb;">{{ p.nombre_cliente }}</div>
-                  <div style="font-size:12px;color:#938C84;">{{ p.id_cliente }}</div>
+                <td class="data-table__cell--primary" data-label="">
+                  <div class="mobile-primary">{{ p.nombre_cliente }}</div>
+                  <div class="mobile-secondary">{{ p.id_cliente }}</div>
                 </td>
-                <td style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
-                <td>
+                <td data-label="Fecha" style="font-size:13px;">{{ p.fecha_pago | dateEc }}</td>
+                <td data-label="Monto" style="font-weight:600;color:#3D8B6D;">$ {{ p.monto }}</td>
+                <td data-label="Método">
                   <span class="badge badge--{{ p.metodo === 'TRANSFERENCIA' ? 'mensual' : 'trimestral' }}">
                     {{ p.metodo }}
                   </span>
                 </td>
-                <td style="font-size:13px;">{{ p.banco || '—' }}</td>
-                <td style="font-size:12px;color:#938C84;font-family:monospace;">
+                <td data-label="Banco" style="font-size:13px;">{{ p.banco || '—' }}</td>
+                <td data-label="Referencia" style="font-size:12px;color:#938C84;font-family:monospace;">
                   {{ formatReferencia(p.referencia_transaccion) }}
                 </td>
-                <td>
+                <td data-label="Estado">
                   <span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span>
                 </td>
               </tr>

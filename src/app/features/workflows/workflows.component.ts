@@ -58,18 +58,20 @@ export class ActiveCountPipe implements PipeTransform {
                 } @else if (executions().length === 0) {
                   <div style="padding:20px;text-align:center;color:#938C84;font-size:13px;">Sin ejecuciones recientes.</div>
                 } @else {
-                  <table class="data-table">
+                  <table class="data-table data-table--stacked-mobile">
                     <thead>
                       <tr><th>ID</th><th>Modo</th><th>Estado</th><th>Inicio</th><th>Fin</th></tr>
                     </thead>
                     <tbody>
                       @for (ex of executions(); track ex.id) {
                         <tr>
-                          <td style="font-size:12px;font-family:monospace;color:#938C84;">{{ ex.id }}</td>
-                          <td style="font-size:12px;">{{ ex.mode }}</td>
-                          <td><span class="badge badge--{{ exBadge(ex.status) }}">{{ ex.status }}</span></td>
-                          <td style="font-size:12px;">{{ ex.startedAt | dateEc : 'dd/MM HH:mm' }}</td>
-                          <td style="font-size:12px;">{{ ex.stoppedAt | dateEc : 'dd/MM HH:mm' }}</td>
+                          <td class="data-table__cell--primary" data-label="">
+                            <div class="mobile-primary" style="font-size:12px;font-family:monospace;color:#938C84;">{{ ex.id }}</div>
+                          </td>
+                          <td data-label="Modo" style="font-size:12px;">{{ ex.mode }}</td>
+                          <td data-label="Estado"><span class="badge badge--{{ exBadge(ex.status) }}">{{ ex.status }}</span></td>
+                          <td data-label="Inicio" style="font-size:12px;">{{ ex.startedAt | dateEc : 'dd/MM HH:mm' }}</td>
+                          <td data-label="Fin" style="font-size:12px;">{{ ex.stoppedAt | dateEc : 'dd/MM HH:mm' }}</td>
                         </tr>
                       }
                     </tbody>

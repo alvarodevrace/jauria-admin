@@ -68,7 +68,7 @@ interface Lead {
       @if (loading()) {
         <div style="padding:40px;text-align:center;color:#938C84;">Cargando...</div>
       } @else {
-        <table class="data-table">
+        <table class="data-table data-table--stacked-mobile">
           <thead>
             <tr>
               <th>Fecha</th>
@@ -84,20 +84,22 @@ interface Lead {
           <tbody>
             @for (lead of filteredLeads(); track lead.id) {
               <tr>
-                <td style="font-size:12px;">{{ lead.created_at | dateEc : 'dd/MM/yy HH:mm' }}</td>
-                <td style="font-weight:600;color:#f4f1eb;">{{ lead.nombre }}</td>
+                <td class="data-table__cell--primary" data-label="">
+                  <div class="mobile-primary">{{ lead.nombre }}</div>
+                  <div class="mobile-secondary">{{ lead.created_at | dateEc : 'dd/MM/yy HH:mm' }}</div>
+                </td>
                 @if (auth.isAdmin()) {
-                  <td style="font-size:13px;">{{ lead.email }}</td>
+                  <td data-label="Email" style="font-size:13px;">{{ lead.email }}</td>
                 }
-                <td style="font-size:13px;">{{ lead.telefono || '—' }}</td>
-                <td>
+                <td data-label="Teléfono" style="font-size:13px;">{{ lead.telefono || '—' }}</td>
+                <td data-label="Programa">
                   @if (lead.programa) {
                     <span class="badge badge--mensual">{{ lead.programa }}</span>
                   } @else {
                     <span style="color:#938C84;">—</span>
                   }
                 </td>
-                <td style="font-size:12px;color:#d2cbc1;max-width:260px;">
+                <td class="data-table__cell--actions" data-label="Mensaje" style="font-size:12px;color:#d2cbc1;max-width:260px;">
                   <button class="btn btn--ghost btn--sm" (click)="selectedLead.set(lead)">
                     {{ lead.mensaje ? 'Ver mensaje' : 'Sin mensaje' }}
                   </button>
