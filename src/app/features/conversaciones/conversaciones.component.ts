@@ -118,10 +118,20 @@ export class ConversacionesComponent implements OnInit {
   escalarRecomendado = computed(() => this.conversaciones().filter((conv) => conv.intentos_validacion >= 2).length);
 
   async ngOnInit() {
-    const { data, error } = await this.supabase.getConversacionesActivas();
-    this.loading.set(false);
-    if (error) { this.toast.error(error.message); return; }
-    this.conversaciones.set((data ?? []) as unknown as Conversacion[]);
+    this.loading.set(true);
+    try {
+      const { data, error } = await this.supabase.getConversacionesActivas();
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.conversaciones.set((data ?? []) as unknown as Conversacion[]);
+    } catch {
+      this.toast.error('No se pudieron cargar las conversaciones');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   estadoBadge(estado: string): string {

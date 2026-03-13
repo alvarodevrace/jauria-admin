@@ -140,14 +140,21 @@ export class PagosComponent implements OnInit {
   pagosPendientes = computed(() => this.filtered().filter((p) => p.estado?.toLowerCase() !== 'completado').length);
 
   async ngOnInit() {
-    const { data, error } = await this.supabase.getHistorialPagos();
-    this.loading.set(false);
-    if (error) {
-      this.toast.error(error.message);
-      return;
+    this.loading.set(true);
+    try {
+      const { data, error } = await this.supabase.getHistorialPagos();
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.pagos.set((data ?? []) as Pago[]);
+      this.filtered.set((data ?? []) as Pago[]);
+    } catch {
+      this.toast.error('No se pudieron cargar los pagos');
+    } finally {
+      this.loading.set(false);
     }
-    this.pagos.set((data ?? []) as Pago[]);
-    this.filtered.set((data ?? []) as Pago[]);
   }
 
   applyFilter() {

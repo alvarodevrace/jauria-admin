@@ -504,17 +504,21 @@ export class EventosNoticiasComponent implements OnInit {
   async loadItems() {
     this.loading.set(true);
     this.error.set(false);
+    try {
+      const { data, error } = await this.supabase.getContenidoAdmin();
+      if (error) {
+        this.error.set(true);
+        this.sentry.captureError(error, { action: 'loadContenidoAdmin' });
+        return;
+      }
 
-    const { data, error } = await this.supabase.getContenidoAdmin();
-    this.loading.set(false);
-
-    if (error) {
+      this.items.set((data ?? []) as ContenidoBox[]);
+    } catch (error) {
       this.error.set(true);
-      this.sentry.captureError(error, { action: 'loadContenidoAdmin' });
-      return;
+      this.sentry.captureError(error, { action: 'loadContenidoAdminUnexpected' });
+    } finally {
+      this.loading.set(false);
     }
-
-    this.items.set((data ?? []) as ContenidoBox[]);
   }
 
   openCreateModal() {
@@ -615,41 +619,43 @@ export class EventosNoticiasComponent implements OnInit {
 
     this.saving.set(true);
     this.formError.set('');
+    try {
+      let imagePath = this.form().imagen_path;
 
-    let imagePath = this.form().imagen_path;
+      if (this.selectedFile()) {
+        const uploadResult = await this.supabase.uploadContenidoImage(this.selectedFile()!);
+        if (uploadResult.error) {
+          this.formError.set(uploadResult.error.message);
+          return;
+        }
+        imagePath = uploadResult.filePath;
+      }
 
-    if (this.selectedFile()) {
-      const uploadResult = await this.supabase.uploadContenidoImage(this.selectedFile()!);
-      if (uploadResult.error) {
-        this.saving.set(false);
-        this.formError.set(uploadResult.error.message);
+      const payload = this.buildPayload(userId, imagePath);
+
+      const result = this.form().id
+        ? await this.supabase.updateContenido(this.form().id!, payload)
+        : await this.supabase.createContenido(payload);
+
+      if (result.error) {
+        this.formError.set(result.error.message);
         return;
       }
-      imagePath = uploadResult.filePath;
-    }
 
-    const payload = this.buildPayload(userId, imagePath);
+      await this.supabase.logAuditoria(
+        userId,
+        this.form().id ? 'contenido_box_updated' : 'contenido_box_created',
+        { contenidoId: (result.data as { id: number }).id, tipo: this.form().tipo },
+      );
 
-    const result = this.form().id
-      ? await this.supabase.updateContenido(this.form().id!, payload)
-      : await this.supabase.createContenido(payload);
-
-    if (result.error) {
+      this.toast.success(this.form().id ? 'Contenido actualizado' : 'Contenido creado');
+      this.closeEditorModal();
+      await this.loadItems();
+    } catch {
+      this.formError.set('No se pudo guardar el contenido');
+    } finally {
       this.saving.set(false);
-      this.formError.set(result.error.message);
-      return;
     }
-
-    await this.supabase.logAuditoria(
-      userId,
-      this.form().id ? 'contenido_box_updated' : 'contenido_box_created',
-      { contenidoId: (result.data as { id: number }).id, tipo: this.form().tipo },
-    );
-
-    this.toast.success(this.form().id ? 'Contenido actualizado' : 'Contenido creado');
-    this.saving.set(false);
-    this.closeEditorModal();
-    await this.loadItems();
   }
 
   async togglePublication(item: ContenidoBox) {

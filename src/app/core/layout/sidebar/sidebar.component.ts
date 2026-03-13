@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../auth/auth.service';
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -38,11 +39,6 @@ import { AuthService } from '../../auth/auth.service';
         <a class="sidebar__item" routerLink="/app/clases" routerLinkActive="active" (click)="close()">
           <i-lucide class="sidebar__item-icon" name="barbell" />
           <span>Clases</span>
-        </a>
-
-        <a class="sidebar__item" routerLink="/app/mi-cuenta" routerLinkActive="active" (click)="close()">
-          <i-lucide class="sidebar__item-icon" name="user" />
-          <span>Mi Cuenta</span>
         </a>
 
         @if (auth.rol() === 'atleta') {
@@ -113,13 +109,17 @@ import { AuthService } from '../../auth/auth.service';
       </nav>
 
       <div class="sidebar__footer">
-        <div class="sidebar__user-mini">
-          <div class="sidebar__user-avatar">{{ initials() }}</div>
+        <button class="sidebar__profile-entry" type="button" (click)="goToProfile()" title="Abrir Mi Cuenta">
+          @if (avatarUrl()) {
+            <img class="sidebar__user-avatar sidebar__user-avatar--image" [src]="avatarUrl()!" [alt]="'Avatar de ' + firstName()" />
+          } @else {
+            <div class="sidebar__user-avatar">{{ initials() }}</div>
+          }
           <div class="sidebar__user-text">
             <span class="sidebar__user-name">{{ firstName() }}</span>
             <span class="sidebar__user-role">{{ auth.rol() }}</span>
           </div>
-        </div>
+        </button>
         <button class="sidebar__logout" (click)="auth.logout()" title="Cerrar sesión">
           <i-lucide name="logout-2" />
         </button>
@@ -175,6 +175,33 @@ import { AuthService } from '../../auth/auth.service';
       flex-shrink: 0;
       color: currentColor;
     }
+    .sidebar__profile-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 6px 8px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .sidebar__profile-entry:hover {
+      background: #1d2022;
+      border-color: #2b3033;
+    }
+    .sidebar__profile-entry:focus-visible {
+      outline: none;
+      border-color: #a61f24;
+      box-shadow: 0 0 0 2px rgba(166, 31, 36, 0.24);
+    }
+    .sidebar__profile-entry .sidebar__user-text,
+    .sidebar__profile-entry .sidebar__user-avatar {
+      pointer-events: none;
+    }
     .sidebar__user-mini {
       display: flex;
       align-items: center;
@@ -194,6 +221,10 @@ import { AuthService } from '../../auth/auth.service';
       font-size: 13px;
       color: #f4f1eb;
       flex-shrink: 0;
+    }
+    .sidebar__user-avatar--image {
+      object-fit: cover;
+      border: 1px solid rgba(166, 31, 36, 0.35);
     }
     .sidebar__user-text {
       display: flex;
@@ -239,6 +270,7 @@ import { AuthService } from '../../auth/auth.service';
 })
 export class SidebarComponent {
   auth = inject(AuthService);
+  private supabase = inject(SupabaseService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   mobileOpen = signal(false);
@@ -266,5 +298,17 @@ export class SidebarComponent {
   firstName() {
     const name = this.auth.profile()?.nombre_completo ?? 'Usuario';
     return name.split(' ')[0] ?? 'Usuario';
+  }
+
+  goToProfile() {
+    this.close();
+    this.router.navigate(['/app/mi-cuenta']);
+  }
+
+  avatarUrl() {
+    const path = this.auth.profile()?.avatar_url;
+    if (!path) return null;
+    if (/^https?:\/\//.test(path)) return path;
+    return this.supabase.getProfileAvatarUrl(path);
   }
 }

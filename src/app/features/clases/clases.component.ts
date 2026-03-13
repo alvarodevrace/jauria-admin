@@ -55,7 +55,7 @@ interface Inscripcion {
   clase_id: number;
   user_id: string;
   estado: string;
-  profiles?: { nombre_completo: string; avatar_url: string };
+  profiles?: { nombre_completo: string; avatar_url: string | null };
 }
 
 interface MiInscripcion {
@@ -705,7 +705,20 @@ const CLASE_THEME = {
                   @for (ins of inscritos(); track ins.id) {
                     <tr>
                       <td class="clases-atleta-cell">
-                        {{ ins.profiles?.nombre_completo ?? '—' }}
+                        <div class="clases-atleta-identity">
+                          @if (avatarUrl(ins.profiles?.avatar_url)) {
+                            <img
+                              class="clases-atleta-avatar"
+                              [src]="avatarUrl(ins.profiles?.avatar_url)!"
+                              [alt]="'Avatar de ' + (ins.profiles?.nombre_completo ?? 'Atleta')"
+                            />
+                          } @else {
+                            <div class="clases-atleta-avatar clases-atleta-avatar--fallback">
+                              {{ profileInitials(ins.profiles?.nombre_completo) }}
+                            </div>
+                          }
+                          <span>{{ ins.profiles?.nombre_completo ?? '—' }}</span>
+                        </div>
                       </td>
                       <td>
                         <span
@@ -978,6 +991,29 @@ const CLASE_THEME = {
         color: #938c84;
         font-size: 14px;
         line-height: 1.4;
+      }
+      .clases-atleta-identity {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .clases-atleta-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid rgba(166, 31, 36, 0.35);
+        flex-shrink: 0;
+      }
+      .clases-atleta-avatar--fallback {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #a61f24, #6f161a);
+        color: #f4f1eb;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
       }
       .week-calendar__header {
         display: grid;
@@ -1258,21 +1294,32 @@ export class ClasesComponent implements OnInit {
       return;
     }
 
-    const { data, error } = await this.supabase.getClases({
-      semana: `${fechaInicio},${domingo}`,
-    });
-    this.loading.set(false);
-    if (error) {
+    try {
+      const { data, error } = await this.supabase.getClases({
+        semana: `${fechaInicio},${domingo}`,
+      });
+
+      if (error) {
+        this.sentry.captureError(error, {
+          action: 'cargarClases',
+          semana: lunes,
+        });
+        this.toast.error('Error cargando clases');
+        return;
+      }
+
+      const clases = ((data ?? []) as unknown as Clase[]).map((clase) => this.normalizeClase(clase));
+      this.clases.set(clases);
+      await this.cargarResumenInscritos(clases);
+    } catch (error) {
       this.sentry.captureError(error, {
-        action: 'cargarClases',
+        action: 'cargarClasesUnexpected',
         semana: lunes,
       });
-      this.toast.error('Error cargando clases');
-      return;
+      this.toast.error('No se pudieron cargar las clases');
+    } finally {
+      this.loading.set(false);
     }
-    const clases = ((data ?? []) as unknown as Clase[]).map((clase) => this.normalizeClase(clase));
-    this.clases.set(clases);
-    await this.cargarResumenInscritos(clases);
   }
 
   onFilterFormatoChange(formato: string) {
@@ -1380,26 +1427,31 @@ export class ClasesComponent implements OnInit {
     }
 
     this.savingClase.set(true);
-    const coachId = this.auth.currentUser()?.id;
-    const { error } = await this.supabase.createClase({
-      ...this.newClase,
-      tipo: 'WOD',
-      descripcion: this.buildDescription(this.newClase.wod_plan),
-      wod_formato: this.newClase.wod_formato,
-      wod_plan: this.newClase.wod_plan,
-      coach_id: coachId,
-    });
-    this.savingClase.set(false);
-    if (error) {
-      this.sentry.captureError(error, { action: 'crearClase' });
-      this.toast.error(error.message);
-      return;
+    try {
+      const coachId = this.auth.currentUser()?.id;
+      const { error } = await this.supabase.createClase({
+        ...this.newClase,
+        tipo: 'WOD',
+        descripcion: this.buildDescription(this.newClase.wod_plan),
+        wod_formato: this.newClase.wod_formato,
+        wod_plan: this.newClase.wod_plan,
+        coach_id: coachId,
+      });
+      if (error) {
+        this.sentry.captureError(error, { action: 'crearClase' });
+        this.toast.error(error.message);
+        return;
+      }
+      this.toast.success('WOD creado');
+      this.showFormClase.set(false);
+      this.newClase = this.emptyClase();
+      this.resetChipDrafts();
+      await this.cargarClases();
+    } catch {
+      this.toast.error('No se pudo guardar la clase');
+    } finally {
+      this.savingClase.set(false);
     }
-    this.toast.success('WOD creado');
-    this.showFormClase.set(false);
-    this.newClase = this.emptyClase();
-    this.resetChipDrafts();
-    await this.cargarClases();
   }
 
   async verClase(clase: Clase) {
@@ -1582,6 +1634,20 @@ export class ClasesComponent implements OnInit {
         } as Record<string, string>
       )[estado] ?? 'inactivo'
     );
+  }
+
+  avatarUrl(path?: string | null) {
+    if (!path) return null;
+    if (/^https?:\/\//.test(path)) return path;
+    return this.supabase.getProfileAvatarUrl(path);
+  }
+
+  profileInitials(name?: string | null) {
+    return (name ?? 'Atleta')
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'AT';
   }
 
   tipoBg(tipo: string): string {

@@ -34,6 +34,8 @@ interface ClaseDisponible {
   cancelada: boolean;
 }
 
+const PROFILE_BIO_MAX = 240;
+
 @Component({
   selector: 'app-mi-cuenta',
   standalone: true,
@@ -53,9 +55,39 @@ interface ClaseDisponible {
         </div>
         <div style="padding:24px;">
           <form (ngSubmit)="onSavePerfil()">
+            <div class="profile-card">
+              <div class="profile-card__avatar-shell">
+                @if (avatarPreview()) {
+                  <img class="profile-card__avatar-image" [src]="avatarPreview()!" alt="Avatar del perfil" />
+                } @else {
+                  <div class="profile-card__avatar-fallback">{{ initials() }}</div>
+                }
+              </div>
+              <div class="profile-card__meta">
+                <div class="profile-card__title">Tu foto de perfil</div>
+                <div class="profile-card__hint">
+                  Ayuda a que el coach y tus compañeros te reconozcan cuando participas en clases.
+                </div>
+                <label class="btn btn--ghost btn--sm profile-card__file-btn">
+                  Cambiar foto
+                  <input type="file" accept="image/*" class="profile-card__file-input" (change)="onAvatarSelected($event)" />
+                </label>
+              </div>
+            </div>
             <div class="form-group">
               <label class="form-label">Nombre Completo</label>
               <input type="text" class="form-control" [(ngModel)]="nombre" name="nombre" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bio corta</label>
+              <textarea
+                class="form-control profile-card__bio"
+                [(ngModel)]="bio"
+                name="bio"
+                [maxLength]="bioMax"
+                placeholder="Cuéntale al box algo breve sobre ti, tus objetivos o tu energía al entrenar."
+              ></textarea>
+              <div class="profile-card__counter">{{ bio.length }}/{{ bioMax }}</div>
             </div>
             <div class="form-group">
               <label class="form-label">Email</label>
@@ -136,6 +168,93 @@ interface ClaseDisponible {
     @media (max-width: 768px) {
       .cuenta-grid { grid-template-columns: 1fr !important; }
     }
+
+    .profile-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 16px;
+      border: 1px solid #2b3033;
+      border-radius: 14px;
+      background: rgba(20, 22, 24, 0.9);
+    }
+
+    .profile-card__avatar-shell {
+      width: 88px;
+      height: 88px;
+      flex-shrink: 0;
+    }
+
+    .profile-card__avatar-image,
+    .profile-card__avatar-fallback {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+
+    .profile-card__avatar-image {
+      object-fit: cover;
+      border: 2px solid rgba(166, 31, 36, 0.4);
+    }
+
+    .profile-card__avatar-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #a61f24, #6f161a);
+      color: #f4f1eb;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .profile-card__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .profile-card__title {
+      color: #f4f1eb;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .profile-card__hint {
+      color: #938c84;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .profile-card__file-btn {
+      width: fit-content;
+      cursor: pointer;
+    }
+
+    .profile-card__file-input {
+      display: none;
+    }
+
+    .profile-card__bio {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .profile-card__counter {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #938c84;
+      text-align: right;
+    }
+
+    @media (max-width: 640px) {
+      .profile-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   `],
 })
 export class MiCuentaComponent implements OnInit, OnDestroy {
@@ -144,11 +263,15 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
 
   nombre = '';
+  bio = '';
+  readonly bioMax = PROFILE_BIO_MAX;
   saving = signal(false);
   perfilMsg = signal('');
+  avatarPreview = signal<string | null>(null);
   cliente = signal<ClientePlan | null>(null);
   proximaClase = signal<NonNullable<MiInscripcion['clases']> | null>(null);
   clasesDisponibles = signal(0);
+  private avatarFile: File | null = null;
   private perfilMsgTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   private claseStart(fecha: string, horaInicio: string): number {
@@ -161,6 +284,8 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.nombre = this.auth.profile()?.nombre_completo ?? '';
+    this.bio = this.auth.profile()?.bio ?? '';
+    this.avatarPreview.set(this.resolveAvatarUrl(this.auth.profile()?.avatar_url ?? null));
 
     const idCliente = this.auth.profile()?.id_cliente;
     if (idCliente) {
@@ -212,25 +337,84 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
     }
   }
 
+  initials() {
+    const name = this.nombre.trim() || this.auth.profile()?.nombre_completo || 'Usuario';
+    return name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'U';
+  }
+
+  onAvatarSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.avatarFile = file;
+
+    if (!file) {
+      this.avatarPreview.set(this.resolveAvatarUrl(this.auth.profile()?.avatar_url ?? null));
+      return;
+    }
+
+    this.avatarPreview.set(URL.createObjectURL(file));
+  }
+
   async onSavePerfil() {
     const userId = this.auth.currentUser()?.id;
     if (!userId || !this.nombre) return;
     this.saving.set(true);
-    const { error } = await this.supabase.updateProfile(userId, { nombre_completo: this.nombre.trim() });
-    this.saving.set(false);
+    try {
+      let avatarPath = this.auth.profile()?.avatar_url ?? null;
 
-    if (error) {
-      this.toast.error('No se pudo actualizar el perfil');
-      return;
+      if (this.avatarFile) {
+        const upload = await this.supabase.uploadProfileAvatar(userId, this.avatarFile);
+        if (upload.error) {
+          this.toast.error('No se pudo subir la foto de perfil');
+          return;
+        }
+        avatarPath = upload.filePath;
+      }
+
+      const payload: Record<string, unknown> = {
+        nombre_completo: this.nombre.trim(),
+        bio: this.bio.trim() || null,
+        avatar_url: avatarPath,
+      };
+
+      const { error } = await this.supabase.updateProfile(userId, payload);
+
+      if (error) {
+        this.toast.error('No se pudo actualizar el perfil');
+        return;
+      }
+
+      const refreshedProfile = await this.auth.refreshProfile();
+      const nextAvatarPath = refreshedProfile?.avatar_url ?? avatarPath;
+      const nextBio = refreshedProfile?.bio ?? (this.bio.trim() || null);
+      const nextName = refreshedProfile?.nombre_completo ?? this.nombre.trim();
+
+      this.nombre = nextName;
+      this.bio = nextBio ?? '';
+      this.avatarFile = null;
+      this.avatarPreview.set(this.resolveAvatarUrl(nextAvatarPath));
+      this.perfilMsg.set('Perfil actualizado');
+      this.toast.success('Perfil actualizado');
+      if (this.perfilMsgTimeoutId) clearTimeout(this.perfilMsgTimeoutId);
+      this.perfilMsgTimeoutId = setTimeout(() => this.perfilMsg.set(''), 3000);
+    } catch {
+      this.toast.error('No se pudo guardar el perfil');
+    } finally {
+      this.saving.set(false);
     }
-
-    this.perfilMsg.set('Perfil actualizado');
-    this.toast.success('Perfil actualizado');
-    if (this.perfilMsgTimeoutId) clearTimeout(this.perfilMsgTimeoutId);
-    this.perfilMsgTimeoutId = setTimeout(() => this.perfilMsg.set(''), 3000);
   }
 
   ngOnDestroy() {
     if (this.perfilMsgTimeoutId) clearTimeout(this.perfilMsgTimeoutId);
+  }
+
+  private resolveAvatarUrl(path: string | null) {
+    if (!path) return null;
+    if (/^https?:\/\//.test(path)) return path;
+    return this.supabase.getProfileAvatarUrl(path);
   }
 }

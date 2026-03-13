@@ -12,6 +12,7 @@ export interface UserProfile {
   email: string;
   rol: 'atleta' | 'coach' | 'admin';
   avatar_url: string | null;
+  bio?: string | null;
   activo: boolean;
 }
 
@@ -186,6 +187,18 @@ export class AuthService {
   async getAccessToken(): Promise<string | null> {
     const { data } = await this.supabase.client.auth.getSession();
     return data.session?.access_token ?? null;
+  }
+
+  async refreshProfile(): Promise<UserProfile | null> {
+    const session = this._session();
+    if (!session?.user) return null;
+    return this.loadProfile(session.user);
+  }
+
+  patchProfile(partial: Partial<UserProfile>) {
+    const current = this._profile();
+    if (!current) return;
+    this._profile.set({ ...current, ...partial });
   }
 
   private async forceLogoutForInactiveProfile() {

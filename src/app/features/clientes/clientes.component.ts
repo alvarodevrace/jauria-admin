@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { ClientsService } from '../../core/services/clients.service';
@@ -323,12 +323,22 @@ export class ClientesComponent implements OnInit {
 
   async cargarClientes() {
     this.loading.set(true);
-    const { data, error } = await this.supabase.getClientes();
-    this.loading.set(false);
-    if (error) { this.toast.error('Error: ' + error.message); return; }
-    const list = (data ?? []) as Cliente[];
-    this.clientes.set(list);
-    this.filtered.set(list);
+    try {
+      const { data, error } = await this.supabase.getClientes();
+      if (error) {
+        this.toast.error('Error: ' + error.message);
+        return;
+      }
+
+      const list = (data ?? []) as Cliente[];
+      this.clientes.set(list);
+      this.applyFilter();
+    } catch (error) {
+      this.sentry.captureError(error, { action: 'cargarClientes' });
+      this.toast.error('No se pudieron cargar los clientes');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   applyFilter() {
@@ -432,25 +442,59 @@ export class ClientesComponent implements OnInit {
 
     this.guardando.set(true);
     this.modalError.set('');
-    const telefonoNormalizado = this.normalizePhoneForStorage(String(this.form.telefono_whatsapp ?? ''));
 
-    if (this.modalMode() === 'crear') {
-      // Generar ID
-      const idCliente = await this.generarIdCliente();
-      const payload = { ...this.form, id_cliente: idCliente, telefono_whatsapp: telefonoNormalizado, estado: 'Pendiente' };
-      const { error } = await this.supabase.createCliente(payload);
-      if (error) { this.modalError.set(error.message); this.guardando.set(false); return; }
-      this.toast.success(`Cliente ${idCliente} creado`);
-    } else {
-      const payload = { ...this.form, telefono_whatsapp: telefonoNormalizado };
-      const { error } = await this.supabase.updateCliente(this.editingId, payload);
-      if (error) { this.modalError.set(error.message); this.guardando.set(false); return; }
-      this.toast.success('Cliente actualizado');
+    try {
+      const telefonoNormalizado = this.normalizePhoneForStorage(String(this.form.telefono_whatsapp ?? ''));
+
+      if (this.modalMode() === 'crear') {
+        const idCliente = await this.generarIdCliente();
+        const payload = {
+          ...this.form,
+          id_cliente: idCliente,
+          telefono_whatsapp: telefonoNormalizado,
+          estado: 'Pendiente',
+        };
+        const { error } = await this.supabase.createCliente(payload);
+        if (error) {
+          this.modalError.set(error.message);
+          return;
+        }
+
+        this.toast.success(`Cliente ${idCliente} creado`);
+      } else {
+        const payload = {
+          nombre_completo: this.form.nombre_completo,
+          email: this.form.email,
+          telefono_whatsapp: telefonoNormalizado,
+          plan: this.form.plan,
+          monto_plan: this.form.monto_plan,
+          metodo_pago: this.form.metodo_pago,
+          estado: this.form.estado,
+          fecha_inicio: this.form.fecha_inicio,
+          fecha_vencimiento: this.form.fecha_vencimiento,
+        };
+
+        const { error } = await this.supabase.updateCliente(this.editingId, payload);
+        if (error) {
+          this.modalError.set(error.message);
+          return;
+        }
+
+        this.toast.success('Cliente actualizado');
+      }
+
+      this.cerrarModal();
+      await this.cargarClientes();
+    } catch (error) {
+      this.sentry.captureError(error, {
+        action: 'guardarCliente',
+        mode: this.modalMode() ?? 'unknown',
+        idCliente: this.editingId || undefined,
+      });
+      this.modalError.set('No se pudo guardar el cliente. Intenta nuevamente.');
+    } finally {
+      this.guardando.set(false);
     }
-
-    this.guardando.set(false);
-    this.cerrarModal();
-    await this.cargarClientes();
   }
 
   private async generarIdCliente(): Promise<string> {
@@ -464,11 +508,9 @@ export class ClientesComponent implements OnInit {
   async enviarRecordatorio(c: Cliente) {
     this.loadingAccion.set(c.id_cliente + '_rec');
     try {
-      await firstValueFrom(
-        this.clientsService.sendReminder(c.id_cliente).pipe(timeout(15000))
-      );
+      await firstValueFrom(this.clientsService.sendReminder(c.id_cliente));
 
-      this.toast.success(`Recordatorio enviado a ${c.nombre_completo}`);
+      this.toast.success(`Flujo enviado para ${c.nombre_completo}`);
     } catch (error) {
       this.sentry.captureError(error, { action: 'sendClientReminder', idCliente: c.id_cliente });
       this.toast.error('No se pudo ejecutar el flujo desde el backend');
@@ -480,9 +522,20 @@ export class ClientesComponent implements OnInit {
   async verHistorial(idCliente: string) {
     this.historialClienteId.set(idCliente);
     this.historialLoading.set(true);
-    const { data } = await this.supabase.getHistorialPagos({ id_cliente: idCliente });
-    this.historial.set((data ?? []) as Pago[]);
-    this.historialLoading.set(false);
+    try {
+      const { data, error } = await this.supabase.getHistorialPagos({ id_cliente: idCliente });
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.historial.set((data ?? []) as Pago[]);
+    } catch (error) {
+      this.sentry.captureError(error, { action: 'verHistorialPagos', idCliente });
+      this.toast.error('No se pudo cargar el historial de pagos');
+    } finally {
+      this.historialLoading.set(false);
+    }
   }
 
   private nextEstadoCliente(cliente: Cliente) {

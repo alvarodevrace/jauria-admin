@@ -306,13 +306,18 @@ export class MiPagoComponent implements OnInit {
     const idCliente = this.auth.profile()?.id_cliente;
     if (!idCliente) { this.loading.set(false); return; }
 
-    const [clienteRes, pagosRes] = await Promise.all([
-      this.supabase.getCliente(idCliente),
-      this.supabase.getHistorialPagos({ id_cliente: idCliente }),
-    ]);
-    this.cliente.set(clienteRes.data as ClientePlan);
-    this.pagos.set((pagosRes.data ?? []) as Pago[]);
-    this.loading.set(false);
+    this.loading.set(true);
+    try {
+      const [clienteRes, pagosRes] = await Promise.all([
+        this.supabase.getCliente(idCliente),
+        this.supabase.getHistorialPagos({ id_cliente: idCliente }),
+      ]);
+
+      this.cliente.set(clienteRes.data as ClientePlan);
+      this.pagos.set((pagosRes.data ?? []) as Pago[]);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   diasRestantesLabel(): string {

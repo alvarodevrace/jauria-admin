@@ -2,7 +2,6 @@ import { Component, DestroyRef, inject, Output, EventEmitter, computed, signal }
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
 
 const ROUTE_TITLES: Record<string, string> = {
   '/app/novedades':      'Novedades',
@@ -30,16 +29,6 @@ const ROUTE_TITLES: Record<string, string> = {
           <span></span><span></span><span></span>
         </button>
         <h1 class="topbar__title">{{ pageTitle() }}</h1>
-      </div>
-
-      <div class="topbar__actions">
-        <div class="topbar__user">
-          <div class="topbar__avatar">{{ initials() }}</div>
-          <div class="topbar__user-info">
-            <span class="name">{{ auth.profile()?.nombre_completo ?? 'Usuario' }}</span>
-            <span class="role">{{ auth.rol() }}</span>
-          </div>
-        </div>
       </div>
     </header>
   `,
@@ -81,7 +70,6 @@ const ROUTE_TITLES: Record<string, string> = {
 })
 export class TopbarComponent {
   @Output() menuClick = new EventEmitter<void>();
-  auth = inject(AuthService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   private currentUrl = signal(this.getCurrentUrl());
@@ -103,10 +91,5 @@ export class TopbarComponent {
 
   private getCurrentUrl(): string {
     return this.router.url.split('?')[0];
-  }
-
-  initials() {
-    const name = this.auth.profile()?.nombre_completo ?? '';
-    return name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase() || 'U';
   }
 }

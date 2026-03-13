@@ -152,12 +152,23 @@ export class RolesComponent implements OnInit {
   canManageRoles = () => this.auth.canManageRoles();
 
   async ngOnInit() {
-    const { data, error } = await this.supabase.getAllProfiles();
-    this.loading.set(false);
-    if (error) { this.toast.error(error.message); return; }
-    const list = (data ?? []) as Profile[];
-    this.profiles.set(list);
-    this.filtered.set(list);
+    this.loading.set(true);
+    try {
+      const { data, error } = await this.supabase.getAllProfiles();
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      const list = (data ?? []) as Profile[];
+      this.profiles.set(list);
+      this.filtered.set(list);
+    } catch (error) {
+      this.sentry.captureError(error, { action: 'loadProfiles' });
+      this.toast.error('No se pudieron cargar los usuarios');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   applyFilter() {

@@ -17,6 +17,7 @@ export class SupabaseService {
   private sentry = inject(SentryService);
   private readonly storageKey = 'jauria-admin-auth-v2';
   private readonly legacyStorageKeys = ['jauria-admin-auth'];
+  private readonly mutationTimeoutMs = 15000;
 
   constructor() {
     this.cleanupLegacyAuthStorage();
@@ -65,6 +66,20 @@ export class SupabaseService {
     return result;
   }
 
+  private async withMutationTimeout(label: string, operation: () => PromiseLike<unknown>): Promise<any> {
+    try {
+      return await Promise.race([
+        Promise.resolve(operation()),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`${label} timed out after ${this.mutationTimeoutMs}ms`)), this.mutationTimeoutMs),
+        ),
+      ]);
+    } catch (error) {
+      this.sentry.captureError(error, { action: label, kind: 'timeout_or_exception' });
+      return { data: null, error };
+    }
+  }
+
   // ── Clientes ──────────────────────────────────────────────────────────────
 
   async getClientes(filters?: { estado?: string; plan?: string }) {
@@ -79,15 +94,21 @@ export class SupabaseService {
   }
 
   async updateCliente(id: string, data: Record<string, unknown>) {
-    return this.client.from('clientes').update(data).eq('id_cliente', id);
+    return this.withMutationTimeout('updateCliente', () =>
+      this.client.from('clientes').update(data).eq('id_cliente', id),
+    );
   }
 
   async createCliente(data: Record<string, unknown>) {
-    return this.client.from('clientes').insert(data).select().single();
+    return this.withMutationTimeout('createCliente', () =>
+      this.client.from('clientes').insert(data).select().single(),
+    );
   }
 
   async setClienteEstado(id: string, estado: string) {
-    const result = await this.client.from('clientes').update({ estado }).eq('id_cliente', id);
+    const result = await this.withMutationTimeout('setClienteEstado', () =>
+      this.client.from('clientes').update({ estado }).eq('id_cliente', id),
+    );
     if (result.error) {
       this.sentry.captureError(result.error, { action: 'setClienteEstado', id, estado });
     }
@@ -176,13 +197,17 @@ export class SupabaseService {
   }
 
   async createContenido(data: ContenidoBoxPayload) {
-    const result = await this.client.from('contenido_box').insert(data).select().single();
+    const result = await this.withMutationTimeout('createContenido', () =>
+      this.client.from('contenido_box').insert(data).select().single(),
+    );
     if (result.error) this.sentry.captureError(result.error, { action: 'createContenido' });
     return result;
   }
 
   async updateContenido(id: number, data: Partial<ContenidoBoxPayload>) {
-    const result = await this.client.from('contenido_box').update(data).eq('id', id).select().single();
+    const result = await this.withMutationTimeout('updateContenido', () =>
+      this.client.from('contenido_box').update(data).eq('id', id).select().single(),
+    );
     if (result.error) this.sentry.captureError(result.error, { action: 'updateContenido', id });
     return result;
   }
@@ -253,15 +278,46 @@ export class SupabaseService {
   }
 
   async updateProfile(userId: string, data: Record<string, unknown>) {
-    return this.client.from('profiles').update(data).eq('id', userId);
+    return this.withMutationTimeout('updateProfile', () =>
+      this.client.from('profiles').update(data).eq('id', userId),
+    );
   }
 
   async getAllProfiles() {
     return this.client.from('profiles').select('*').order('created_at');
   }
 
+  async uploadProfileAvatar(userId: string, file: File) {
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const safeExtension = extension === 'jpeg' ? 'jpg' : extension;
+    const filePath = `${userId}/avatar-${Date.now()}.${safeExtension}`;
+
+    const result = await this.withMutationTimeout('uploadProfileAvatar', () =>
+      this.client.storage
+        .from('profile-avatars')
+        .upload(filePath, file, { contentType: file.type }),
+    );
+
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'uploadProfileAvatar', userId, filePath });
+    }
+
+    return {
+      ...result,
+      filePath,
+    };
+  }
+
+  getProfileAvatarUrl(path: string | null | undefined) {
+    if (!path) return '';
+    const { data } = this.client.storage.from('profile-avatars').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async updateProfileRole(userId: string, rol: string) {
-    const result = await this.client.from('profiles').update({ rol }).eq('id', userId);
+    const result = await this.withMutationTimeout('updateProfileRole', () =>
+      this.client.from('profiles').update({ rol }).eq('id', userId),
+    );
     if (result.error) {
       this.sentry.captureError(result.error, { action: 'updateProfileRole', userId, rol });
     }
@@ -300,13 +356,17 @@ export class SupabaseService {
   }
 
   async createClase(data: Record<string, unknown>) {
-    const result = await this.client.from('clases').insert(data).select().single();
+    const result = await this.withMutationTimeout('createClase', () =>
+      this.client.from('clases').insert(data).select().single(),
+    );
     if (result.error) this.sentry.captureError(result.error, { action: 'createClase' });
     return result;
   }
 
   async updateClase(id: number, data: Record<string, unknown>) {
-    return this.client.from('clases').update(data).eq('id', id);
+    return this.withMutationTimeout('updateClase', () =>
+      this.client.from('clases').update(data).eq('id', id),
+    );
   }
 
   async deleteClase(id: number) {

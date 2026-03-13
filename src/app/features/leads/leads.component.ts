@@ -198,10 +198,20 @@ export class LeadsComponent implements OnInit {
   leadsConPrograma = computed(() => this.leads().filter((lead) => !!lead.programa).length);
 
   async ngOnInit() {
-    const { data, error } = await this.supabase.getLeads();
-    this.loading.set(false);
-    if (error) { this.toast.error(error.message); return; }
-    this.leads.set((data ?? []) as Lead[]);
+    this.loading.set(true);
+    try {
+      const { data, error } = await this.supabase.getLeads();
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.leads.set((data ?? []) as Lead[]);
+    } catch {
+      this.toast.error('No se pudieron cargar los leads');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   exportCsv() {

@@ -552,19 +552,22 @@ export class NovedadesComponent implements OnInit {
   async loadContenido() {
     this.loading.set(true);
     this.error.set(false);
+    try {
+      const { data, error } = await this.supabase.getContenidoPublicado();
+      if (error) {
+        this.error.set(true);
+        this.sentry.captureError(error, { action: 'loadContenidoPublicado' });
+        return;
+      }
 
-    const { data, error } = await this.supabase.getContenidoPublicado();
-
-    this.loading.set(false);
-
-    if (error) {
+      this.items.set((data ?? []) as ContenidoBox[]);
+      this.featuredIndex.set(0);
+    } catch (error) {
       this.error.set(true);
-      this.sentry.captureError(error, { action: 'loadContenidoPublicado' });
-      return;
+      this.sentry.captureError(error, { action: 'loadContenidoPublicadoUnexpected' });
+    } finally {
+      this.loading.set(false);
     }
-
-    this.items.set((data ?? []) as ContenidoBox[]);
-    this.featuredIndex.set(0);
   }
 
   imageUrl(item: ContenidoBox) {
