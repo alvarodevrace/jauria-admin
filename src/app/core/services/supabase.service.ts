@@ -9,6 +9,7 @@ import {
   ContenidoTipo,
   EstadoPublicacion,
 } from '../models/contenido-box.model';
+import { getEcuadorTodayYmd } from '../../shared/utils/date-ecuador';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -83,6 +84,33 @@ export class SupabaseService {
 
   async createCliente(data: Record<string, unknown>) {
     return this.client.from('clientes').insert(data).select().single();
+  }
+
+  async setClienteEstado(id: string, estado: string) {
+    const result = await this.client.from('clientes').update({ estado }).eq('id_cliente', id);
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'setClienteEstado', id, estado });
+    }
+    return result;
+  }
+
+  async getClienteDependencias(id: string) {
+    const [profiles, pagos, conversaciones] = await Promise.all([
+      this.client.from('profiles').select('id', { count: 'exact', head: true }).eq('id_cliente', id),
+      this.client.from('historial_pagos').select('id', { count: 'exact', head: true }).eq('id_cliente', id),
+      this.client.from('conversaciones_whatsapp').select('id', { count: 'exact', head: true }).eq('id_cliente', id),
+    ]);
+
+    if (profiles.error) this.sentry.captureError(profiles.error, { action: 'getClienteDependencias', source: 'profiles', id });
+    if (pagos.error) this.sentry.captureError(pagos.error, { action: 'getClienteDependencias', source: 'historial_pagos', id });
+    if (conversaciones.error) this.sentry.captureError(conversaciones.error, { action: 'getClienteDependencias', source: 'conversaciones_whatsapp', id });
+
+    return {
+      profiles: profiles.count ?? 0,
+      pagos: pagos.count ?? 0,
+      conversaciones: conversaciones.count ?? 0,
+      error: profiles.error ?? pagos.error ?? conversaciones.error ?? null,
+    };
   }
 
   // ── Historial Pagos ───────────────────────────────────────────────────────
@@ -196,7 +224,7 @@ export class SupabaseService {
     const extension = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
     const safeExtension = extension === 'jpeg' ? 'jpg' : extension;
     const generatedName = fileName ?? `${crypto.randomUUID()}.${safeExtension}`;
-    const filePath = `contenido/${new Date().toISOString().slice(0, 10)}/${generatedName}`;
+    const filePath = `contenido/${getEcuadorTodayYmd()}/${generatedName}`;
 
     const result = await this.client.storage
       .from('contenido-box')

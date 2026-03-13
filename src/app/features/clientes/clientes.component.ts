@@ -1,12 +1,17 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { AdminPaymentsService } from '../../core/services/admin-payments.service';
+import { N8nService } from '../../core/services/n8n.service';
+import { SentryService } from '../../core/services/sentry.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { PlanLabelPipe } from '../../shared/pipes/plan-label.pipe';
-import { environment } from '../../../environments/environment';
 import { LucideAngularModule } from 'lucide-angular';
+import { addDaysToEcuadorDate, getDaysFromTodayInEcuador, getEcuadorTodayYmd } from '../../shared/utils/date-ecuador';
 
 interface Cliente {
   id_cliente: string;
@@ -33,6 +38,7 @@ interface Pago {
 }
 
 type ModalMode = 'crear' | 'editar' | null;
+type ClientesView = 'operativos' | 'inactivos' | 'todos';
 
 @Component({
   selector: 'app-clientes',
@@ -50,6 +56,11 @@ type ModalMode = 'crear' | 'editar' | null;
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Todos los Clientes</span>
         <div class="toolbar-row">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn--sm" [class.btn--primary]="view() === 'operativos'" [class.btn--ghost]="view() !== 'operativos'" (click)="setView('operativos')">Operativos</button>
+            <button class="btn btn--sm" [class.btn--primary]="view() === 'inactivos'" [class.btn--ghost]="view() !== 'inactivos'" (click)="setView('inactivos')">Inactivos</button>
+            <button class="btn btn--sm" [class.btn--primary]="view() === 'todos'" [class.btn--ghost]="view() !== 'todos'" (click)="setView('todos')">Todos</button>
+          </div>
           <div class="search-input">
             <input type="text" placeholder="Buscar..." [(ngModel)]="searchTerm" (input)="applyFilter()" />
           </div>
@@ -111,7 +122,7 @@ type ModalMode = 'crear' | 'editar' | null;
                 <td style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
                 <td>
                   <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="confirmarEdicion(c)"><i-lucide name="pencil" /></button>
                     <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-lucide name="clipboard" /></button>
                     <button class="btn btn--ghost btn--sm btn--icon" title="Enviar recordatorio WhatsApp" aria-label="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)" [disabled]="loadingAccion() === c.id_cliente + '_rec'">
                       @if (loadingAccion() === c.id_cliente + '_rec') { ... } @else { <i-lucide name="send" /> }
@@ -121,6 +132,16 @@ type ModalMode = 'crear' | 'editar' | null;
                         @if (loadingAccion() === c.id_cliente + '_pay') { ... } @else { <i-lucide name="link" /> }
                       </button>
                     }
+                    <button
+                      class="btn btn--sm"
+                      [class.btn--danger]="c.estado !== 'Inactivo'"
+                      [class.btn--secondary]="c.estado === 'Inactivo'"
+                      [title]="c.estado === 'Inactivo' ? 'Reactivar cliente' : 'Dar de baja cliente'"
+                      (click)="toggleEstadoCliente(c)"
+                      [disabled]="loadingAccion() === c.id_cliente + '_status'"
+                    >
+                      {{ loadingAccion() === c.id_cliente + '_status' ? '...' : (c.estado === 'Inactivo' ? 'Reactivar' : 'Dar de baja') }}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -269,12 +290,17 @@ type ModalMode = 'crear' | 'editar' | null;
 })
 export class ClientesComponent implements OnInit {
   private supabase = inject(SupabaseService);
+  private confirmDialog = inject(ConfirmDialogService);
+  private adminPayments = inject(AdminPaymentsService);
+  private n8n = inject(N8nService);
+  private sentry = inject(SentryService);
   private toast = inject(ToastService);
 
   clientes = signal<Cliente[]>([]);
   filtered = signal<Cliente[]>([]);
   loading = signal(true);
   loadingAccion = signal('');
+  view = signal<ClientesView>('operativos');
   searchTerm = '';
   filterEstado = '';
   filterPlan = '';
@@ -307,6 +333,8 @@ export class ClientesComponent implements OnInit {
 
   applyFilter() {
     let result = this.clientes();
+    if (this.view() === 'operativos') result = result.filter(c => c.estado !== 'Inactivo');
+    if (this.view() === 'inactivos') result = result.filter(c => c.estado === 'Inactivo');
     if (this.searchTerm) {
       const t = this.searchTerm.toLowerCase();
       result = result.filter(c =>
@@ -321,11 +349,19 @@ export class ClientesComponent implements OnInit {
     this.filtered.set(result);
   }
 
+  setView(view: ClientesView) {
+    this.view.set(view);
+    if (view === 'operativos' && this.filterEstado === 'Inactivo') this.filterEstado = '';
+    if (view === 'inactivos') this.filterEstado = 'Inactivo';
+    if (view === 'todos') this.filterEstado = '';
+    this.applyFilter();
+  }
+
   // ── Fecha helpers ──────────────────────────────────────────────────────────
 
   diasRestantes(fechaVenc: string): string {
     if (!fechaVenc) return '';
-    const diff = Math.ceil((new Date(fechaVenc).getTime() - Date.now()) / 86400000);
+    const diff = getDaysFromTodayInEcuador(fechaVenc);
     if (diff > 0) return `${diff} días restantes`;
     if (diff === 0) return 'Vence hoy';
     return `Venció hace ${Math.abs(diff)} días`;
@@ -333,7 +369,7 @@ export class ClientesComponent implements OnInit {
 
   diasColor(fechaVenc: string): string {
     if (!fechaVenc) return '#666';
-    const diff = Math.ceil((new Date(fechaVenc).getTime() - Date.now()) / 86400000);
+    const diff = getDaysFromTodayInEcuador(fechaVenc);
     if (diff > 5) return '#4caf50';
     if (diff >= 0) return '#ff9800';
     return '#ef5350';
@@ -359,6 +395,19 @@ export class ClientesComponent implements OnInit {
     this.form = this.emptyForm();
   }
 
+  async confirmarEdicion(cliente: Cliente) {
+    const confirmed = await this.confirmDialog.open({
+      title: 'Editar cliente',
+      message: `Vas a editar los datos de ${cliente.nombre_completo}.`,
+      confirmLabel: 'Editar cliente',
+      cancelLabel: 'Cancelar',
+      tone: 'primary',
+    });
+
+    if (!confirmed) return;
+    this.abrirModal('editar', cliente);
+  }
+
   onPlanChange() {
     // Auto-set monto según plan (valores de referencia)
     const defaults: Record<string, number> = { MENSUAL: 55, TRIMESTRAL: 150, ANUAL: 550 };
@@ -372,9 +421,7 @@ export class ClientesComponent implements OnInit {
   calcFechaVencimiento() {
     if (!this.form.fecha_inicio || !this.form.plan) return;
     const dias: Record<string, number> = { MENSUAL: 30, TRIMESTRAL: 90, ANUAL: 365 };
-    const inicio = new Date(this.form.fecha_inicio);
-    inicio.setDate(inicio.getDate() + (dias[this.form.plan] ?? 30));
-    this.form.fecha_vencimiento = inicio.toISOString().slice(0, 10);
+    this.form.fecha_vencimiento = addDaysToEcuadorDate(this.form.fecha_inicio as string, dias[this.form.plan] ?? 30);
   }
 
   async guardarCliente() {
@@ -382,6 +429,19 @@ export class ClientesComponent implements OnInit {
       this.modalError.set('Completa todos los campos obligatorios.');
       return;
     }
+
+    if (this.modalMode() === 'editar') {
+      const confirmed = await this.confirmDialog.open({
+        title: 'Guardar cambios del cliente',
+        message: `Se actualizará la ficha de ${this.form.nombre_completo}.`,
+        confirmLabel: 'Guardar cambios',
+        cancelLabel: 'Cancelar',
+        tone: 'primary',
+      });
+
+      if (!confirmed) return;
+    }
+
     this.guardando.set(true);
     this.modalError.set('');
 
@@ -414,16 +474,12 @@ export class ClientesComponent implements OnInit {
   async enviarRecordatorio(c: Cliente) {
     this.loadingAccion.set(c.id_cliente + '_rec');
     try {
-      // Trigger WF1 vía webhook (si se crea uno por cliente — por ahora notifica al coach)
-      const res = await fetch(`${environment.n8nApiUrl}/workflows/GzmYUYGMG1X8wnTm/run`, {
-        method: 'POST',
-        headers: { 'X-N8N-API-KEY': environment.n8nApiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_cliente: c.id_cliente }),
-      });
-      if (res.ok) this.toast.success(`Recordatorio enviado a ${c.nombre_completo}`);
-      else this.toast.warning('WF1 ejecutado — verificar en n8n');
-    } catch {
-      this.toast.error('No se pudo conectar con n8n');
+      await firstValueFrom(this.n8n.runWorkflow('GzmYUYGMG1X8wnTm', { id_cliente: c.id_cliente }));
+
+      this.toast.success(`Recordatorio enviado a ${c.nombre_completo}`);
+    } catch (error) {
+      this.sentry.captureError(error, { action: 'runReminderWorkflow', idCliente: c.id_cliente });
+      this.toast.error('No se pudo ejecutar el flujo desde el backend');
     }
     this.loadingAccion.set('');
   }
@@ -431,38 +487,24 @@ export class ClientesComponent implements OnInit {
   async generarLinkPayphone(c: Cliente) {
     this.loadingAccion.set(c.id_cliente + '_pay');
     try {
-      const montoCentavos = Math.round(c.monto_plan * 100);
-      const res = await fetch('https://pay.payphonetodoesposible.com/api/Links', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${environment.n8nApiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: montoCentavos,
-          amountWithTax: 0,
-          amountWithoutTax: montoCentavos,
-          tax: 0,
-          currency: 'USD',
-          storeId: '5f49f41a-fa45-4e0d-842e-be9cc652a3be',
-          clientTransactionId: c.id_cliente,
-          responseUrl: 'https://n8n.alvarodevrace.tech/webhook/payphone-notificacion',
-          cancellationUrl: 'https://n8n.alvarodevrace.tech/webhook/payphone-notificacion',
-          reference: `Pago ${c.plan} ${c.nombre_completo}`,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const link = data.paymentUrl ?? data.link ?? '';
-        if (link) {
-          await this.supabase.updateCliente(c.id_cliente, { link_pago_actual: link });
-          this.toast.success('Link Payphone generado y guardado');
-          await this.cargarClientes();
-        } else {
-          this.toast.warning('Link generado pero URL no encontrada en respuesta');
-        }
+      const data = await firstValueFrom(this.adminPayments.createPayphoneLink({
+        idCliente: c.id_cliente,
+        montoCentavos: Math.round(c.monto_plan * 100),
+        referencia: `Pago ${c.plan} ${c.nombre_completo}`,
+      }));
+
+      const link = data.paymentUrl ?? data.link ?? '';
+      if (link) {
+        await this.supabase.updateCliente(c.id_cliente, { link_pago_actual: link });
+        this.toast.success('Link Payphone generado y guardado');
+        await this.cargarClientes();
       } else {
-        this.toast.error('Error Payphone: ' + res.status);
+        this.toast.warning('Link generado pero URL no encontrada en respuesta');
       }
-    } catch {
-      this.toast.error('No se pudo generar el link Payphone');
+    } catch (error) {
+      this.sentry.captureError(error, { action: 'createPayphoneLink', idCliente: c.id_cliente });
+      const message = (error as { error?: { message?: string } })?.error?.message ?? 'No se pudo generar el link Payphone desde el backend';
+      this.toast.error(message);
     }
     this.loadingAccion.set('');
   }
@@ -475,6 +517,46 @@ export class ClientesComponent implements OnInit {
     this.historialLoading.set(false);
   }
 
+  private nextEstadoCliente(cliente: Cliente) {
+    if (cliente.estado === 'Inactivo') {
+      const dias = getDaysFromTodayInEcuador(cliente.fecha_vencimiento);
+      return dias > 5 ? 'Activo' : 'Pendiente';
+    }
+
+    return 'Inactivo';
+  }
+
+  async toggleEstadoCliente(cliente: Cliente) {
+    const nextEstado = this.nextEstadoCliente(cliente);
+    const confirmed = await this.confirmDialog.open({
+      title: nextEstado === 'Inactivo' ? 'Dar de baja cliente' : 'Reactivar cliente',
+      message: nextEstado === 'Inactivo'
+        ? `Se marcará a ${cliente.nombre_completo} como Inactivo. Su historial se conserva y saldrá del flujo operativo normal.`
+        : `Se reactivará a ${cliente.nombre_completo} y volverá a la operación diaria con estado ${nextEstado}.`,
+      confirmLabel: nextEstado === 'Inactivo' ? 'Dar de baja' : 'Reactivar',
+      cancelLabel: 'Cancelar',
+      tone: nextEstado === 'Inactivo' ? 'danger' : 'primary',
+    });
+
+    if (!confirmed) return;
+
+    this.loadingAccion.set(cliente.id_cliente + '_status');
+
+    try {
+      const { error } = await this.supabase.setClienteEstado(cliente.id_cliente, nextEstado);
+      if (error) {
+        this.sentry.captureError(error, { action: 'setClienteEstado', idCliente: cliente.id_cliente, estado: nextEstado });
+        this.toast.error('No se pudo actualizar el estado del cliente');
+        return;
+      }
+
+      this.toast.success(`Cliente ${nextEstado === 'Inactivo' ? 'marcado como Inactivo' : 'reactivado'}: ${cliente.nombre_completo}`);
+      await this.cargarClientes();
+    } finally {
+      this.loadingAccion.set('');
+    }
+  }
+
   private emptyForm(): Partial<Cliente> & Record<string, unknown> {
     return {
       nombre_completo: '',
@@ -484,7 +566,7 @@ export class ClientesComponent implements OnInit {
       monto_plan: 0,
       metodo_pago: 'TRANSFERENCIA',
       estado: 'Activo',
-      fecha_inicio: new Date().toISOString().slice(0, 10),
+      fecha_inicio: getEcuadorTodayYmd(),
       fecha_vencimiento: '',
     };
   }

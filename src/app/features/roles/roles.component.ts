@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { AdminUsersService } from '../../core/services/admin-users.service';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -24,8 +26,13 @@ interface Profile {
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Sistema</span>
-      <h2 class="page-header__title">Gestión de Roles</h2>
-      <p class="page-header__subtitle">{{ profiles().length }} personas registradas</p>
+      <h2 class="page-header__title">{{ canManageRoles() ? 'Usuarios y Roles' : 'Usuarios Registrados' }}</h2>
+      <p class="page-header__subtitle">
+        {{ profiles().length }} personas registradas
+        @if (!canManageRoles()) {
+          · vista operativa para coach
+        }
+      </p>
     </div>
 
     <div class="data-table-wrapper">
@@ -47,7 +54,10 @@ interface Profile {
               <th>Rol actual</th>
               <th>Creado</th>
               <th>Activo</th>
-              <th>Cambiar Rol</th>
+              @if (canManageRoles()) {
+                <th>Cambiar Rol</th>
+              }
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -72,31 +82,50 @@ interface Profile {
                     {{ p.activo ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
+                @if (canManageRoles()) {
+                  <td>
+                    @if (p.id !== currentUserId()) {
+                      <div style="display:flex;gap:8px;align-items:center;">
+                        <select
+                          class="form-control"
+                          style="width:auto;height:34px;font-size:12px;"
+                          [ngModel]="p.rol"
+                          (ngModelChange)="cambiarRol(p, $event)"
+                          [disabled]="changing() === p.id"
+                        >
+                          <option value="atleta">Atleta</option>
+                          <option value="coach">coach</option>
+                          <option value="admin">admin</option>
+                        </select>
+                        @if (changing() === p.id) {
+                          <span style="font-size:12px;color:#938c84;">guardando...</span>
+                        }
+                      </div>
+                    } @else {
+                      <span style="font-size:12px;color:#938c84;font-style:italic;">tú</span>
+                    }
+                  </td>
+                }
                 <td>
-                  @if (p.id !== currentUserId()) {
+                  @if (canToggleProfile(p)) {
                     <div style="display:flex;gap:8px;align-items:center;">
-                      <select
-                        class="form-control"
-                        style="width:auto;height:34px;font-size:12px;"
-                        [ngModel]="p.rol"
-                        (ngModelChange)="cambiarRol(p, $event)"
-                        [disabled]="changing() === p.id"
+                      <button
+                        class="btn btn--sm"
+                        [class.btn--danger]="p.activo"
+                        [class.btn--secondary]="!p.activo"
+                        (click)="toggleProfileStatus(p)"
+                        [disabled]="deleting() === p.id"
                       >
-                        <option value="atleta">Atleta</option>
-                        <option value="coach">coach</option>
-                        <option value="admin">admin</option>
-                      </select>
-                      @if (changing() === p.id) {
-                        <span style="font-size:12px;color:#938c84;">guardando...</span>
-                      }
+                        {{ deleting() === p.id ? 'Procesando...' : (p.activo ? 'Desactivar' : 'Reactivar') }}
+                      </button>
                     </div>
                   } @else {
-                    <span style="font-size:12px;color:#938c84;font-style:italic;">tú</span>
+                    <span style="font-size:12px;color:#938c84;font-style:italic;">Sin acción</span>
                   }
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:#938c84;">Sin personas registradas.</td></tr>
+              <tr><td [attr.colspan]="canManageRoles() ? 7 : 6" style="text-align:center;padding:40px;color:#938c84;">Sin personas registradas.</td></tr>
             }
           </tbody>
         </table>
@@ -107,6 +136,8 @@ interface Profile {
 export class RolesComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private auth     = inject(AuthService);
+  private adminUsers = inject(AdminUsersService);
+  private confirmDialog = inject(ConfirmDialogService);
   private toast    = inject(ToastService);
   private sentry   = inject(SentryService);
 
@@ -114,9 +145,11 @@ export class RolesComponent implements OnInit {
   filtered   = signal<Profile[]>([]);
   loading    = signal(true);
   changing   = signal<string | null>(null);
+  deleting   = signal<string | null>(null);
   searchTerm = '';
 
   currentUserId = () => this.auth.currentUser()?.id ?? '';
+  canManageRoles = () => this.auth.canManageRoles();
 
   async ngOnInit() {
     const { data, error } = await this.supabase.getAllProfiles();
@@ -165,5 +198,57 @@ export class RolesComponent implements OnInit {
 
   rolBadge(rol: string): string {
     return ({ admin: 'activo', coach: 'pendiente', atleta: 'inactivo' } as Record<string, string>)[rol] ?? 'inactivo';
+  }
+
+  canToggleProfile(profile: Profile) {
+    if (profile.id === this.currentUserId()) return false;
+    if (this.auth.isAdmin()) return profile.rol !== 'admin';
+    return this.auth.isCoach() && profile.rol === 'atleta';
+  }
+
+  async toggleProfileStatus(profile: Profile) {
+    if (!this.canToggleProfile(profile)) return;
+
+    const nextActivo = !profile.activo;
+
+    const confirmed = await this.confirmDialog.open({
+      title: nextActivo ? 'Reactivar usuario' : 'Desactivar usuario',
+      message: nextActivo
+        ? `Se reactivará la cuenta de ${profile.nombre_completo} y podrá volver a ingresar al panel.`
+        : `Se desactivará la cuenta de ${profile.nombre_completo}. Perderá acceso al panel hasta que la reactives.`,
+      confirmLabel: nextActivo ? 'Reactivar usuario' : 'Desactivar usuario',
+      cancelLabel: 'Cancelar',
+      tone: nextActivo ? 'primary' : 'danger',
+    });
+
+    if (!confirmed) return;
+
+    this.deleting.set(profile.id);
+
+    this.adminUsers.updateUserStatus(profile.id, nextActivo).subscribe({
+      next: async () => {
+        this.profiles.update((list) => list.map((item) => item.id === profile.id ? { ...item, activo: nextActivo } : item));
+        this.filtered.update((list) => list.map((item) => item.id === profile.id ? { ...item, activo: nextActivo } : item));
+        this.toast.success(`Cuenta ${nextActivo ? 'reactivada' : 'desactivada'}: ${profile.nombre_completo}`);
+
+        const actorId = this.auth.currentUser()?.id;
+        if (actorId) {
+          await this.supabase.logAuditoria(actorId, nextActivo ? 'reactivar_usuario' : 'desactivar_usuario', {
+            target_user: profile.email,
+            target_role: profile.rol,
+            activo: nextActivo,
+          });
+        }
+      },
+      error: (error) => {
+        this.sentry.captureError(error, { action: 'toggleUserStatus', targetUserId: profile.id, activo: nextActivo });
+        const message = error?.error?.message ?? 'No se pudo actualizar el usuario';
+        this.toast.error(message);
+        this.deleting.set(null);
+      },
+      complete: () => {
+        this.deleting.set(null);
+      },
+    });
   }
 }

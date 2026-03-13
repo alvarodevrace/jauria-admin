@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
+import { getEcuadorTodayYmd } from '../../shared/utils/date-ecuador';
 
 interface Lead {
   id: number;
@@ -24,7 +26,9 @@ interface Lead {
     <div class="page-header">
       <span class="page-header__eyebrow">Landing Page</span>
       <h2 class="page-header__title">Leads</h2>
-      <p class="page-header__subtitle">{{ filteredLeads().length }} visibles · {{ leads().length }} registrados</p>
+      <p class="page-header__subtitle">
+        {{ auth.isAdmin() ? 'Inbox completo del formulario de contacto.' : 'Vista comercial recortada para seguimiento del coach.' }}
+      </p>
     </div>
 
     <div class="stats-grid" style="margin-bottom:24px;">
@@ -47,7 +51,7 @@ interface Lead {
         <span class="data-table-wrapper__title">Formulario de Contacto</span>
         <div class="toolbar-row">
           <div class="search-input">
-            <input type="text" placeholder="Buscar por nombre, email o teléfono" [(ngModel)]="searchTerm" />
+            <input type="text" [placeholder]="auth.isAdmin() ? 'Buscar por nombre, email o teléfono' : 'Buscar por nombre o teléfono'" [(ngModel)]="searchTerm" />
           </div>
           <select class="form-control" style="width:auto;height:38px;" [(ngModel)]="filterPrograma">
             <option value="">Todos los programas</option>
@@ -55,7 +59,9 @@ interface Lead {
               <option [value]="programa">{{ programa }}</option>
             }
           </select>
-          <button class="btn btn--ghost btn--sm" (click)="exportCsv()">⬇ Exportar CSV</button>
+          @if (auth.canExportLeads()) {
+            <button class="btn btn--ghost btn--sm" (click)="exportCsv()">⬇ Exportar CSV</button>
+          }
         </div>
       </div>
 
@@ -67,7 +73,9 @@ interface Lead {
             <tr>
               <th>Fecha</th>
               <th>Nombre</th>
-              <th>Email</th>
+              @if (auth.isAdmin()) {
+                <th>Email</th>
+              }
               <th>Teléfono</th>
               <th>Programa</th>
               <th>Mensaje</th>
@@ -78,7 +86,9 @@ interface Lead {
               <tr>
                 <td style="font-size:12px;">{{ lead.created_at | dateEc : 'dd/MM/yy HH:mm' }}</td>
                 <td style="font-weight:600;color:#f4f1eb;">{{ lead.nombre }}</td>
-                <td style="font-size:13px;">{{ lead.email }}</td>
+                @if (auth.isAdmin()) {
+                  <td style="font-size:13px;">{{ lead.email }}</td>
+                }
                 <td style="font-size:13px;">{{ lead.telefono || '—' }}</td>
                 <td>
                   @if (lead.programa) {
@@ -94,7 +104,7 @@ interface Lead {
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:#938C84;">No hay leads aún</td></tr>
+              <tr><td [attr.colspan]="auth.isAdmin() ? 6 : 5" style="text-align:center;padding:40px;color:#938C84;">No hay leads aún</td></tr>
             }
           </tbody>
         </table>
@@ -120,10 +130,12 @@ interface Lead {
               </div>
             </div>
             <div class="two-column-grid" style="margin-top:16px;">
-              <div class="form-group">
-                <label class="form-label">Email</label>
-                <div class="form-control" style="display:flex;align-items:center;">{{ selectedLead()!.email }}</div>
-              </div>
+              @if (auth.isAdmin()) {
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <div class="form-control" style="display:flex;align-items:center;">{{ selectedLead()!.email }}</div>
+                </div>
+              }
               <div class="form-group">
                 <label class="form-label">Teléfono</label>
                 <div class="form-control" style="display:flex;align-items:center;">{{ selectedLead()!.telefono || '—' }}</div>
@@ -147,6 +159,7 @@ interface Lead {
   `,
 })
 export class LeadsComponent implements OnInit {
+  protected auth = inject(AuthService);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
 
@@ -162,7 +175,10 @@ export class LeadsComponent implements OnInit {
 
     return this.leads().filter((lead) => {
       const matchesPrograma = !programa || lead.programa === programa;
-      const matchesTerm = !term || [lead.nombre, lead.email, lead.telefono]
+      const searchableValues = this.auth.isAdmin()
+        ? [lead.nombre, lead.email, lead.telefono]
+        : [lead.nombre, lead.telefono, lead.mensaje];
+      const matchesTerm = !term || searchableValues
         .some((value) => (value ?? '').toLowerCase().includes(term));
       return matchesPrograma && matchesTerm;
     });
@@ -173,7 +189,7 @@ export class LeadsComponent implements OnInit {
   });
 
   leadsHoy = computed(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getEcuadorTodayYmd();
     return this.leads().filter((lead) => lead.created_at.startsWith(today)).length;
   });
 
@@ -199,7 +215,7 @@ export class LeadsComponent implements OnInit {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `leads-jauria-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `leads-jauria-${getEcuadorTodayYmd()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }

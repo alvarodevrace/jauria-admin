@@ -9,15 +9,13 @@ import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { LucideAngularModule } from 'lucide-angular';
 import {
-  format,
-  startOfWeek,
-  addDays,
-  addWeeks,
-  subWeeks,
-  isSameDay,
-  parseISO,
-} from 'date-fns';
-import { es } from 'date-fns/locale';
+  formatEcuadorDate,
+  getEcuadorNow,
+  getEcuadorTodayYmd,
+  getStartOfEcuadorWeek,
+  parseEcuadorDateTime,
+} from '../../shared/utils/date-ecuador';
+import { addDays, addWeeks, subWeeks } from 'date-fns';
 
 type WodFormat = 'AMRAP' | 'EMOM' | 'FOR TIME' | 'TABATA' | 'CHIPPER' | 'DEATH BY';
 type WodBlockKey = 'warmup' | 'accessories' | 'main';
@@ -1146,17 +1144,17 @@ export class ClasesComponent implements OnInit {
   };
 
   // Semana actual
-  private semanaBase = signal(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  private semanaBase = signal(getStartOfEcuadorWeek());
 
   diasSemana = computed(() => {
     const lunes = this.semanaBase();
     return Array.from({ length: 7 }, (_, i) => {
       const d = addDays(lunes, i);
       return {
-        fecha: format(d, 'yyyy-MM-dd'),
-        nombre: format(d, 'EEE', { locale: es }),
-        num: format(d, 'd'),
-        esHoy: isSameDay(d, new Date()),
+        fecha: formatEcuadorDate(d, 'yyyy-MM-dd'),
+        nombre: formatEcuadorDate(d, 'EEE'),
+        num: formatEcuadorDate(d, 'd'),
+        esHoy: formatEcuadorDate(d, 'yyyy-MM-dd') === getEcuadorTodayYmd(),
       };
     });
   });
@@ -1164,7 +1162,7 @@ export class ClasesComponent implements OnInit {
   semanaLabel = computed(() => {
     const lunes = this.semanaBase();
     const domingo = addDays(lunes, 6);
-    return `${format(lunes, 'd MMM', { locale: es })} – ${format(domingo, 'd MMM yyyy', { locale: es })}`;
+    return `${formatEcuadorDate(lunes, 'd MMM')} – ${formatEcuadorDate(domingo, 'd MMM yyyy')}`;
   });
 
   clasesFiltradas = computed(() => {
@@ -1242,15 +1240,15 @@ export class ClasesComponent implements OnInit {
     void this.cargarClases();
   }
   irHoy() {
-    this.semanaBase.set(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    this.semanaBase.set(getStartOfEcuadorWeek());
     void this.cargarClases();
   }
 
   async cargarClases() {
     this.loading.set(true);
-    const lunes = format(this.semanaBase(), 'yyyy-MM-dd');
-    const domingo = format(addDays(this.semanaBase(), 6), 'yyyy-MM-dd');
-    const hoy = format(new Date(), 'yyyy-MM-dd');
+    const lunes = formatEcuadorDate(this.semanaBase(), 'yyyy-MM-dd');
+    const domingo = formatEcuadorDate(addDays(this.semanaBase(), 6), 'yyyy-MM-dd');
+    const hoy = getEcuadorTodayYmd();
     const fechaInicio = lunes < hoy ? hoy : lunes;
 
     if (fechaInicio > domingo) {
@@ -1321,11 +1319,11 @@ export class ClasesComponent implements OnInit {
   }
 
   puedeIrSemanaAnterior(): boolean {
-    return this.semanaBase().getTime() > startOfWeek(new Date(), { weekStartsOn: 1 }).getTime();
+    return this.semanaBase().getTime() > getStartOfEcuadorWeek().getTime();
   }
 
   puedeInscribirse(clase: Clase): boolean {
-    return this.claseStart(clase).getTime() > Date.now();
+    return this.claseStart(clase).getTime() > new Date().getTime();
   }
 
   actionTitle(clase: Clase): string {
@@ -1338,15 +1336,15 @@ export class ClasesComponent implements OnInit {
   }
 
   esClaseVisible(clase: Pick<Clase, 'fecha' | 'hora_inicio' | 'hora_fin'>): boolean {
-    return this.claseEnd(clase).getTime() > Date.now();
+    return this.claseEnd(clase).getTime() > new Date().getTime();
   }
 
   private claseStart(clase: Pick<Clase, 'fecha' | 'hora_inicio'>): Date {
-    return parseISO(`${clase.fecha}T${clase.hora_inicio}`);
+    return parseEcuadorDateTime(clase.fecha, clase.hora_inicio);
   }
 
   private claseEnd(clase: Pick<Clase, 'fecha' | 'hora_inicio' | 'hora_fin'>): Date {
-    return parseISO(`${clase.fecha}T${clase.hora_fin ?? clase.hora_inicio}`);
+    return parseEcuadorDateTime(clase.fecha, clase.hora_fin ?? clase.hora_inicio);
   }
 
   private async cargarResumenInscritos(clases: Clase[]) {
@@ -1711,13 +1709,13 @@ export class ClasesComponent implements OnInit {
   }
 
   private emptyClase(): ClaseFormState {
-    const now = new Date();
+    const now = getEcuadorNow();
     const startAt = this.roundToNextHalfHour(now);
     const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
 
     return {
       tipo: 'WOD',
-      fecha: format(new Date(), 'yyyy-MM-dd'),
+      fecha: getEcuadorTodayYmd(),
       hora_inicio: this.formatTime(startAt),
       hora_fin: this.formatTime(endAt),
       capacidad_maxima: 20,
@@ -1763,6 +1761,6 @@ export class ClasesComponent implements OnInit {
   }
 
   private formatTime(date: Date): string {
-    return format(date, 'HH:mm');
+    return formatEcuadorDate(date, 'HH:mm');
   }
 }

@@ -78,7 +78,7 @@ interface ContenidoFormState {
 
         <div class="editorial-toolbar">
           <div class="search-input">
-            <i-lucide class="icon" name="search" />
+            <i-lucide class="icon" name="clipboard" />
             <input
               type="text"
               [ngModel]="search()"
@@ -100,7 +100,7 @@ interface ContenidoFormState {
           </select>
 
           <button class="btn btn--primary" (click)="openCreateModal()">
-            <i-lucide name="plus" />
+            <i-lucide name="check" />
             Nuevo
           </button>
         </div>
@@ -161,7 +161,7 @@ interface ContenidoFormState {
                 <td>
                   <div class="data-table__actions editorial-actions">
                     <button class="btn btn--ghost btn--sm btn--icon btn--icon-clean" (click)="previewItem(item)" title="Vista previa" aria-label="Vista previa">
-                      <i-lucide name="eye" />
+                      <i-lucide name="info-circle" />
                     </button>
                     <button class="btn btn--ghost btn--sm" (click)="openEditModal(item)">
                       Editar

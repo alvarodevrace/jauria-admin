@@ -34,9 +34,11 @@ export class AuthService {
   readonly canViewTechnicalDashboard = computed(() => this._profile()?.rol === 'admin');
   readonly canManageBusinessOperations = computed(() => ['coach', 'admin'].includes(this._profile()?.rol ?? ''));
   readonly canManageInfrastructure = computed(() => this._profile()?.rol === 'admin');
-  readonly canViewLeadInbox = computed(() => this._profile()?.rol === 'admin');
+  readonly canViewLeadInbox = computed(() => ['coach', 'admin'].includes(this._profile()?.rol ?? ''));
+  readonly canExportLeads = computed(() => this._profile()?.rol === 'admin');
   readonly canViewWhatsappOperations = computed(() => this._profile()?.rol === 'admin');
   readonly canViewWorkflowOperations = computed(() => this._profile()?.rol === 'admin');
+  readonly canManageUsers = computed(() => ['coach', 'admin'].includes(this._profile()?.rol ?? ''));
   readonly canManageRoles = computed(() => this._profile()?.rol === 'admin');
 
   constructor(
@@ -48,7 +50,12 @@ export class AuthService {
     try {
       const { data } = await this.supabase.client.auth.getSession();
       this._session.set(data.session);
-      if (data.session) await this.loadProfile(data.session.user);
+      if (data.session) {
+        const profile = await this.loadProfile(data.session.user);
+        if (profile && !profile.activo) {
+          await this.forceLogoutForInactiveProfile();
+        }
+      }
     } catch (error) {
       if (this.isInvalidRefreshTokenError(error)) {
         await this.resetLocalSession();
@@ -62,7 +69,10 @@ export class AuthService {
     this.supabase.client.auth.onAuthStateChange(async (_, session) => {
       this._session.set(session);
       if (session?.user) {
-        await this.loadProfile(session.user);
+        const profile = await this.loadProfile(session.user);
+        if (profile && !profile.activo) {
+          await this.forceLogoutForInactiveProfile();
+        }
       } else {
         this._profile.set(null);
         if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
@@ -84,14 +94,20 @@ export class AuthService {
       || error.message.includes('Refresh Token Not Found');
   }
 
-  private async loadProfile(user: User) {
+  private async loadProfile(user: User): Promise<UserProfile | null> {
     const { data, error } = await this.supabase.getProfile(user.id);
     if (!error && data) {
       const p = data as UserProfile;
+      if (!p.activo) {
+        this._profile.set(null);
+        if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
+        return p;
+      }
       this._profile.set(p);
       if (environment.sentryEnabled && environment.sentryDsn) {
         Sentry.setUser({ id: p.id, email: p.email, username: p.nombre_completo, segment: p.rol });
       }
+      return p;
     } else if (error?.code === 'PGRST116') {
       // Perfil no existe — buscamos si el email tiene un cliente vinculado
       let idCliente: string | null = null;
@@ -120,8 +136,10 @@ export class AuthService {
           const p = created as UserProfile;
           Sentry.setUser({ id: p.id, email: p.email, username: p.nombre_completo, segment: p.rol });
         }
+        return created as UserProfile;
       }
     }
+    return null;
   }
 
   async login(email: string, password: string): Promise<{ error: string | null }> {
@@ -129,7 +147,11 @@ export class AuthService {
     if (error) return { error: this.mapError(error.message) };
     if (data.session) {
       this._session.set(data.session);
-      await this.loadProfile(data.session.user);
+      const profile = await this.loadProfile(data.session.user);
+      if (profile && !profile.activo) {
+        await this.forceLogoutForInactiveProfile();
+        return { error: 'Tu cuenta está inactiva. Pide al coach o al admin que la reactiven.' };
+      }
     }
     return { error: null };
   }
@@ -164,6 +186,17 @@ export class AuthService {
   async getAccessToken(): Promise<string | null> {
     const { data } = await this.supabase.client.auth.getSession();
     return data.session?.access_token ?? null;
+  }
+
+  private async forceLogoutForInactiveProfile() {
+    try {
+      await this.supabase.signOut();
+    } catch {
+      // noop
+    }
+
+    await this.resetLocalSession();
+    await this.router.navigate(['/auth/login'], { replaceUrl: true });
   }
 
   private mapError(msg: string): string {

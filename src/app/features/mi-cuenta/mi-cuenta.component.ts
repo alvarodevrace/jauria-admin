@@ -6,7 +6,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { PlanLabelPipe } from '../../shared/pipes/plan-label.pipe';
-import { parseISO } from 'date-fns';
+import { getEcuadorTodayYmd, parseEcuadorDateTime } from '../../shared/utils/date-ecuador';
 
 interface ClientePlan {
   estado: string;
@@ -152,11 +152,11 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
   private perfilMsgTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   private claseStart(fecha: string, horaInicio: string): number {
-    return parseISO(`${fecha}T${horaInicio}`).getTime();
+    return parseEcuadorDateTime(fecha, horaInicio).getTime();
   }
 
   private claseEnd(fecha: string, horaInicio: string, horaFin?: string): number {
-    return parseISO(`${fecha}T${horaFin ?? horaInicio}`).getTime();
+    return parseEcuadorDateTime(fecha, horaFin ?? horaInicio).getTime();
   }
 
   async ngOnInit() {
@@ -172,7 +172,7 @@ export class MiCuentaComponent implements OnInit, OnDestroy {
     if (userId && this.auth.rol() === 'atleta') {
       const [inscripcionesRes, clasesRes] = await Promise.all([
         this.supabase.getInscripcionesByUser(userId),
-        this.supabase.getClasesDesde(new Date().toISOString().slice(0, 10)),
+        this.supabase.getClasesDesde(getEcuadorTodayYmd()),
       ]);
 
       const inscripciones = ((inscripcionesRes.data ?? []) as unknown as MiInscripcion[])

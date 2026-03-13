@@ -44,7 +44,7 @@ export const routes: Routes = [
       },
       {
         path: 'leads',
-        canActivate: [roleGuard], data: { roles: ['admin'] },
+        canActivate: [roleGuard], data: { roles: ['coach', 'admin'] },
         loadComponent: () => import('./features/leads/leads.component').then(m => m.LeadsComponent),
       },
       {
@@ -73,7 +73,7 @@ export const routes: Routes = [
       },
       {
         path: 'roles',
-        canActivate: [roleGuard], data: { roles: ['admin'] },
+        canActivate: [roleGuard], data: { roles: ['coach', 'admin'] },
         loadComponent: () => import('./features/roles/roles.component').then(m => m.RolesComponent),
       },
       { path: '**', redirectTo: 'novedades' },

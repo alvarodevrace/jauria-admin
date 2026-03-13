@@ -71,20 +71,29 @@ import { AuthService } from '../../auth/auth.service';
             <span>Pagos</span>
           </a>
 
+          @if (auth.canViewLeadInbox()) {
+            <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
+              <i-lucide class="sidebar__item-icon" name="clipboard" />
+              <span>Leads</span>
+            </a>
+          }
+
           <a class="sidebar__item" routerLink="/app/eventos-noticias" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="mail" />
             <span>Eventos y Noticias</span>
           </a>
+
+          @if (auth.canManageUsers()) {
+            <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">
+              <i-lucide class="sidebar__item-icon" name="users" />
+              <span>Usuarios</span>
+            </a>
+          }
         }
 
         <!-- Admin only -->
         @if (auth.canManageInfrastructure()) {
           <span class="sidebar__section-label">Sistema</span>
-
-          <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
-            <i-lucide class="sidebar__item-icon" name="clipboard" />
-            <span>Leads</span>
-          </a>
 
           <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="message" />
@@ -99,11 +108,6 @@ import { AuthService } from '../../auth/auth.service';
           <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="settings-2" />
             <span>Configuración del Sistema</span>
-          </a>
-
-          <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">
-            <i-lucide class="sidebar__item-icon" name="key" />
-            <span>Gestión de Roles</span>
           </a>
         }
       </nav>

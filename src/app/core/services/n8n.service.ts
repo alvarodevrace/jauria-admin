@@ -52,6 +52,14 @@ export class N8nService {
     if (workflowId) url += `&workflowId=${workflowId}`;
     return this.http.get<{ data: Execution[] }>(url, { headers: this.headers });
   }
+
+  runWorkflow(id: string, payload: Record<string, unknown>): Observable<unknown> {
+    return this.http.post(
+      `${this.base}/workflows/${id}/run`,
+      payload,
+      { headers: this.headers }
+    );
+  }
 }
 
 export interface WorkflowSummary {

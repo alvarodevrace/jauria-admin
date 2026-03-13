@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 import { PlanLabelPipe } from '../../shared/pipes/plan-label.pipe';
+import { getDaysFromTodayInEcuador } from '../../shared/utils/date-ecuador';
 
 interface ClientePlan {
   id_cliente: string;
@@ -317,7 +318,7 @@ export class MiPagoComponent implements OnInit {
   diasRestantesLabel(): string {
     const venc = this.cliente()?.fecha_vencimiento;
     if (!venc) return '';
-    const diff = Math.ceil((new Date(venc).getTime() - Date.now()) / 86400000);
+    const diff = getDaysFromTodayInEcuador(venc);
     if (diff > 0) return `${diff} días restantes`;
     if (diff === 0) return 'Vence hoy';
     return `Venció hace ${Math.abs(diff)} días`;
@@ -326,7 +327,7 @@ export class MiPagoComponent implements OnInit {
   diasColor(): string {
     const venc = this.cliente()?.fecha_vencimiento;
     if (!venc) return '#938C84';
-    const diff = Math.ceil((new Date(venc).getTime() - Date.now()) / 86400000);
+    const diff = getDaysFromTodayInEcuador(venc);
     if (diff > 5) return '#3D8B6D';
     if (diff >= 0) return '#C58A2A';
     return '#C1454A';
