@@ -460,6 +460,14 @@ $topbar-height: 64px;
     }
   }
 
+  &--devuelto {
+    background: rgba(v.$color-warning, 0.15);
+    color: v.$color-warning;
+    &::before {
+      background: v.$color-warning;
+    }
+  }
+
   &--esperando {
     background: rgba(v.$color-info, 0.15);
     color: v.$color-info;

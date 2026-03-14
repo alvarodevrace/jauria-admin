@@ -13,10 +13,11 @@ interface Alerta { tipo: string; titulo: string; msg: string; }
 type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
 
 const BRAND_CHART = {
-  primaryFill: 'rgba(166, 31, 36, 0.78)',
-  primaryBorder: '#a61f24',
-  accentFill: 'rgba(193, 42, 48, 0.72)',
-  neutralFill: 'rgba(147, 140, 132, 0.72)',
+  primaryFill: 'rgba(29, 78, 137, 0.82)',
+  primaryBorder: '#1d4e89',
+  planMonthlyFill: 'rgba(23, 121, 103, 0.86)',
+  planQuarterlyFill: 'rgba(212, 137, 26, 0.86)',
+  planAnnualFill: 'rgba(111, 76, 155, 0.82)',
   surface: '#151718',
   grid: 'rgba(58, 64, 68, 0.6)',
   tick: '#938c84',
@@ -362,7 +363,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         labels: ['Mensual', 'Trimestral', 'Anual'],
         datasets: [{
           data: counts,
-          backgroundColor: [BRAND_CHART.primaryFill, BRAND_CHART.accentFill, BRAND_CHART.neutralFill],
+          backgroundColor: [
+            BRAND_CHART.planMonthlyFill,
+            BRAND_CHART.planQuarterlyFill,
+            BRAND_CHART.planAnnualFill,
+          ],
           borderColor: BRAND_CHART.surface,
           borderWidth: 2,
         }],

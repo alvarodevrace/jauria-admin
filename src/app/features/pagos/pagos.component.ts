@@ -18,6 +18,20 @@ interface Pago {
   estado: string;
 }
 
+type PagoEstadoBadge =
+  | 'completado'
+  | 'pendiente'
+  | 'fallido'
+  | 'devuelto'
+  | 'vencido'
+  | 'inactivo'
+  | 'esperando';
+
+interface PagoEstadoOption {
+  value: PagoEstadoBadge;
+  label: string;
+}
+
 @Component({
   selector: 'app-pagos',
   standalone: true,
@@ -57,8 +71,8 @@ interface Pago {
           </select>
           <select class="form-control" style="width:auto;height:38px;" [(ngModel)]="filterEstado" (change)="applyFilter()">
             <option value="">Todos los estados</option>
-            @for (estado of estadosDisponibles(); track estado) {
-              <option [value]="estado">{{ estado }}</option>
+            @for (estado of estadosDisponibles(); track estado.value) {
+              <option [value]="estado.value">{{ estado.label }}</option>
             }
           </select>
           <select class="form-control" style="width:auto;height:38px;" [(ngModel)]="filterBanco" (change)="applyFilter()">
@@ -106,7 +120,7 @@ interface Pago {
                   {{ formatReferencia(p.referencia_transaccion) }}
                 </td>
                 <td data-label="Estado">
-                  <span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span>
+                  <span class="badge badge--{{ estadoBadge(p.estado) }}">{{ estadoLabel(p.estado) }}</span>
                 </td>
               </tr>
             } @empty {
@@ -134,10 +148,21 @@ export class PagosComponent implements OnInit {
   filterBanco = '';
   searchTerm = '';
 
-  estadosDisponibles = computed(() => [...new Set(this.pagos().map((p) => p.estado).filter(Boolean))]);
+  estadosDisponibles = computed<PagoEstadoOption[]>(() => {
+    const order: PagoEstadoBadge[] = ['completado', 'pendiente', 'esperando', 'fallido', 'devuelto', 'vencido', 'inactivo'];
+    const present = new Set(this.pagos().map((p) => this.estadoBadge(p.estado)));
+
+    return order
+      .filter((value) => present.has(value))
+      .map((value) => ({ value, label: this.estadoFilterLabel(value) }));
+  });
   bancosDisponibles = computed(() => [...new Set(this.pagos().map((p) => p.banco).filter(Boolean))]);
-  totalFiltrado = computed(() => this.filtered().reduce((sum, pago) => sum + Number(pago.monto ?? 0), 0));
-  pagosPendientes = computed(() => this.filtered().filter((p) => p.estado?.toLowerCase() !== 'completado').length);
+  totalFiltrado = computed(() =>
+    this.filtered()
+      .filter((pago) => this.estadoBadge(pago.estado) === 'completado')
+      .reduce((sum, pago) => sum + Number(pago.monto ?? 0), 0),
+  );
+  pagosPendientes = computed(() => this.filtered().filter((p) => this.estadoBadge(p.estado) !== 'completado').length);
 
   async ngOnInit() {
     this.loading.set(true);
@@ -162,7 +187,7 @@ export class PagosComponent implements OnInit {
     const term = this.searchTerm.trim().toLowerCase();
 
     if (this.filterMetodo) result = result.filter((p) => p.metodo === this.filterMetodo);
-    if (this.filterEstado) result = result.filter((p) => p.estado === this.filterEstado);
+    if (this.filterEstado) result = result.filter((p) => this.estadoBadge(p.estado) === this.filterEstado);
     if (this.filterBanco) result = result.filter((p) => p.banco === this.filterBanco);
     if (term) {
       result = result.filter((p) =>
@@ -178,5 +203,57 @@ export class PagosComponent implements OnInit {
     if (!referencia) return '—';
     if (referencia.length <= 16) return referencia;
     return `${referencia.slice(0, 6)}...${referencia.slice(-6)}`;
+  }
+
+  estadoBadge(estado: string): PagoEstadoBadge {
+    const normalized = (estado ?? '').trim().toLowerCase();
+
+    if (['completado', 'confirmado', 'approved', 'aprobado', 'success', 'exitoso'].includes(normalized)) {
+      return 'completado';
+    }
+
+    if (['pendiente', 'pending'].includes(normalized)) {
+      return 'pendiente';
+    }
+
+    if (['devuelto', 'refunded'].includes(normalized)) {
+      return 'devuelto';
+    }
+
+    if (['fallido', 'failed', 'rechazado', 'denegado', 'cancelado', 'canceled', 'anulado', 'voided'].includes(normalized)) {
+      return 'fallido';
+    }
+
+    if (['esperando', 'processing', 'procesando'].includes(normalized)) {
+      return 'esperando';
+    }
+
+    if (['vencido'].includes(normalized)) {
+      return 'vencido';
+    }
+
+    if (['inactivo'].includes(normalized)) {
+      return 'inactivo';
+    }
+
+    return 'inactivo';
+  }
+
+  estadoLabel(estado: string): string {
+    return this.estadoBadge(estado) === 'completado' ? 'Completado' : estado;
+  }
+
+  estadoFilterLabel(estado: PagoEstadoBadge): string {
+    return (
+      {
+        completado: 'Completado',
+        pendiente: 'Pendiente',
+        esperando: 'Esperando',
+        fallido: 'Anulado',
+        devuelto: 'Devuelto',
+        vencido: 'Vencido',
+        inactivo: 'Inactivo',
+      } satisfies Record<PagoEstadoBadge, string>
+    )[estado];
   }
 }
