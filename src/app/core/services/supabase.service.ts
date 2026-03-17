@@ -17,7 +17,7 @@ export class SupabaseService {
   private sentry = inject(SentryService);
   private readonly storageKey = 'jauria-admin-auth-v2';
   private readonly legacyStorageKeys = ['jauria-admin-auth'];
-  private readonly mutationTimeoutMs = 15000;
+  private readonly mutationTimeoutMs = 30000;
 
   constructor() {
     this.cleanupLegacyAuthStorage();
@@ -58,12 +58,29 @@ export class SupabaseService {
   }
 
   // ── Helper con captura de errores ─────────────────────────────────────────
-  private async q<T>(label: string, fn: () => Promise<{ data: T | null; error: unknown }>) {
+  private async q<T>(label: string, fn: () => Promise<any>) {
     const result = await fn();
     if (result.error) {
       this.sentry.captureError(result.error, { query: label });
     }
     return result;
+  }
+
+  private async withQueryTimeout<T>(label: string, operation: () => PromiseLike<any>): Promise<any> {
+    try {
+      return await Promise.race([
+        Promise.resolve(operation()),
+        new Promise<any>((resolve) =>
+          setTimeout(() => resolve({
+            data: null,
+            error: new Error(`${label} timed out after ${this.mutationTimeoutMs}ms`),
+          }), this.mutationTimeoutMs),
+        ),
+      ]);
+    } catch (error) {
+      this.sentry.captureError(error, { query: label, kind: 'timeout_or_exception' });
+      return { data: null, error };
+    }
   }
 
   private async withMutationTimeout(label: string, operation: () => PromiseLike<unknown>): Promise<any> {
@@ -86,11 +103,13 @@ export class SupabaseService {
     let query = this.client.from('clientes').select('*').order('fecha_vencimiento', { ascending: true });
     if (filters?.estado) query = query.eq('estado', filters.estado);
     if (filters?.plan)   query = query.eq('plan', filters.plan);
-    return query;
+    return this.withQueryTimeout('getClientes', () => query);
   }
 
   async getCliente(id: string) {
-    return this.client.from('clientes').select('*').eq('id_cliente', id).single();
+    return this.withQueryTimeout('getCliente', () =>
+      this.client.from('clientes').select('*').eq('id_cliente', id).single(),
+    );
   }
 
   async updateCliente(id: string, data: Record<string, unknown>) {
@@ -143,27 +162,37 @@ export class SupabaseService {
     if (filters?.id_cliente) query = query.eq('id_cliente', filters.id_cliente);
     if (filters?.banco)      query = query.eq('banco', filters.banco);
     if (filters?.metodo)     query = query.eq('metodo', filters.metodo);
-    return query;
+    return this.withQueryTimeout('getHistorialPagos', () => query);
   }
 
   // ── Conversaciones WhatsApp ───────────────────────────────────────────────
 
   async getConversacionesActivas() {
-    return this.client
-      .from('conversaciones_whatsapp')
-      .select('*, clientes(nombre_completo, telefono_whatsapp)')
-      .not('estado', 'in', '(completado,fallido)')
-      .order('updated_at', { ascending: false });
+    return this.withQueryTimeout('getConversacionesActivas', () =>
+      this.client
+        .from('conversaciones_whatsapp')
+        .select('*, clientes(nombre_completo, telefono_whatsapp)')
+        .not('estado', 'in', '(completado,fallido)')
+        .order('updated_at', { ascending: false }),
+    );
   }
 
   async updateConversacion(id: number, data: Record<string, unknown>) {
-    return this.client.from('conversaciones_whatsapp').update(data).eq('id', id);
+    const result = await this.withMutationTimeout('updateConversacion', () =>
+      this.client.from('conversaciones_whatsapp').update(data).eq('id', id),
+    );
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'updateConversacion', id });
+    }
+    return result;
   }
 
   // ── Leads ─────────────────────────────────────────────────────────────────
 
   async getLeads() {
-    return this.client.from('leads').select('*').order('created_at', { ascending: false });
+    return this.withQueryTimeout('getLeads', () =>
+      this.client.from('leads').select('*').order('created_at', { ascending: false }),
+    );
   }
 
   // ── Contenido Box ────────────────────────────────────────────────────────
@@ -177,7 +206,7 @@ export class SupabaseService {
       .order('created_at', { ascending: false });
 
     if (filters?.tipo) query = query.eq('tipo', filters.tipo);
-    return query;
+    return this.withQueryTimeout('getContenidoPublicado', () => query);
   }
 
   async getContenidoAdmin(filters?: ContenidoBoxFilters) {
@@ -193,7 +222,7 @@ export class SupabaseService {
       query = query.or(`titulo.ilike.%${term}%,descripcion.ilike.%${term}%`);
     }
 
-    return query;
+    return this.withQueryTimeout('getContenidoAdmin', () => query);
   }
 
   async createContenido(data: ContenidoBoxPayload) {
@@ -213,7 +242,9 @@ export class SupabaseService {
   }
 
   async deleteContenido(id: number, imagenPath?: string | null) {
-    const result = await this.client.from('contenido_box').delete().eq('id', id);
+    const result = await this.withMutationTimeout('deleteContenido', () =>
+      this.client.from('contenido_box').delete().eq('id', id),
+    );
     if (result.error) {
       this.sentry.captureError(result.error, { action: 'deleteContenido', id });
       return result;
@@ -238,7 +269,9 @@ export class SupabaseService {
       published_at: estado === 'published' ? new Date().toISOString() : null,
     };
 
-    const result = await this.client.from('contenido_box').update(payload).eq('id', id).select().single();
+    const result = await this.withMutationTimeout('setContenidoPublicationState', () =>
+      this.client.from('contenido_box').update(payload).eq('id', id).select().single(),
+    );
     if (result.error) {
       this.sentry.captureError(result.error, { action: 'setContenidoPublicationState', id, estado });
     }
@@ -274,7 +307,9 @@ export class SupabaseService {
   // ── Profiles ──────────────────────────────────────────────────────────────
 
   async getProfile(userId: string) {
-    return this.client.from('profiles').select('*').eq('id', userId).single();
+    return this.withQueryTimeout('getProfile', () =>
+      this.client.from('profiles').select('*').eq('id', userId).single(),
+    );
   }
 
   async updateProfile(userId: string, data: Record<string, unknown>) {
@@ -284,7 +319,9 @@ export class SupabaseService {
   }
 
   async getAllProfiles() {
-    return this.client.from('profiles').select('*').order('created_at');
+    return this.withQueryTimeout('getAllProfiles', () =>
+      this.client.from('profiles').select('*').order('created_at'),
+    );
   }
 
   async uploadProfileAvatar(userId: string, file: File) {
@@ -330,7 +367,7 @@ export class SupabaseService {
     let query = this.client
       .from('clases')
       .select('*, profiles(nombre_completo)')
-      .eq('cancelada', false)
+      .or('cancelada.is.false,cancelada.is.null')
       .order('fecha')
       .order('hora_inicio');
 
@@ -342,70 +379,92 @@ export class SupabaseService {
       const [inicio, fin] = filters.semana.split(',');
       query = query.gte('fecha', inicio).lte('fecha', fin);
     }
-    return query;
+    return this.withQueryTimeout('getClases', () => query);
   }
 
   async getClasesDesde(fechaDesde: string) {
-    return this.client
-      .from('clases')
-      .select('*, profiles(nombre_completo)')
-      .eq('cancelada', false)
-      .gte('fecha', fechaDesde)
-      .order('fecha')
-      .order('hora_inicio');
+    return this.withQueryTimeout('getClasesDesde', () =>
+      this.client
+        .from('clases')
+        .select('*, profiles(nombre_completo)')
+        .or('cancelada.is.false,cancelada.is.null')
+        .gte('fecha', fechaDesde)
+        .order('fecha')
+        .order('hora_inicio'),
+    );
   }
 
   async createClase(data: Record<string, unknown>) {
-    const result = await this.withMutationTimeout('createClase', () =>
-      this.client.from('clases').insert(data).select().single(),
-    );
+    const result = await this.client.from('clases').insert(data);
     if (result.error) this.sentry.captureError(result.error, { action: 'createClase' });
     return result;
   }
 
   async updateClase(id: number, data: Record<string, unknown>) {
-    return this.withMutationTimeout('updateClase', () =>
+    const result = await this.withMutationTimeout('updateClase', () =>
       this.client.from('clases').update(data).eq('id', id),
     );
+    if (result.error) this.sentry.captureError(result.error, { action: 'updateClase', id });
+    return result;
   }
 
   async deleteClase(id: number) {
-    return this.client.from('clases').delete().eq('id', id);
+    const result = await this.withMutationTimeout('deleteClase', () =>
+      this.client.from('clases').delete().eq('id', id),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'deleteClase', id });
+    return result;
   }
 
   // ── Inscripciones ─────────────────────────────────────────────────────────
 
   async inscribirseAClase(claseId: number, userId: string) {
-    return this.client.from('inscripciones').insert({ clase_id: claseId, user_id: userId }).select().single();
+    const result = await this.withMutationTimeout('inscribirseAClase', () =>
+      this.client.from('inscripciones').insert({ clase_id: claseId, user_id: userId }).select().single(),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'inscribirseAClase', claseId, userId });
+    return result;
   }
 
   async getInscripcionByClaseYUsuario(claseId: number, userId: string) {
-    return this.client.from('inscripciones')
-      .select('*')
-      .eq('clase_id', claseId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    return this.withQueryTimeout('getInscripcionByClaseYUsuario', () =>
+      this.client.from('inscripciones')
+        .select('*')
+        .eq('clase_id', claseId)
+        .eq('user_id', userId)
+        .maybeSingle(),
+    );
   }
 
   async reactivarInscripcion(inscripcionId: number) {
-    return this.client.from('inscripciones')
-      .update({ estado: 'inscrito' })
-      .eq('id', inscripcionId)
-      .select()
-      .single();
+    const result = await this.withMutationTimeout('reactivarInscripcion', () =>
+      this.client.from('inscripciones')
+        .update({ estado: 'inscrito' })
+        .eq('id', inscripcionId)
+        .select()
+        .single(),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'reactivarInscripcion', inscripcionId });
+    return result;
   }
 
   async cancelarInscripcion(claseId: number, userId: string) {
-    return this.client.from('inscripciones')
-      .update({ estado: 'cancelado' })
-      .eq('clase_id', claseId).eq('user_id', userId);
+    const result = await this.withMutationTimeout('cancelarInscripcion', () =>
+      this.client.from('inscripciones')
+        .update({ estado: 'cancelado' })
+        .eq('clase_id', claseId).eq('user_id', userId),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'cancelarInscripcion', claseId, userId });
+    return result;
   }
 
   async getInscripcionesByClase(claseId: number) {
-    return this.client.from('inscripciones')
-      .select('*, profiles(nombre_completo, avatar_url)')
-      .eq('clase_id', claseId)
-      .neq('estado', 'cancelado');
+    return this.withQueryTimeout('getInscripcionesByClase', () =>
+      this.client.from('inscripciones')
+        .select('*, profiles(nombre_completo, avatar_url)')
+        .eq('clase_id', claseId)
+        .neq('estado', 'cancelado'),
+    );
   }
 
   async getInscripcionesResumen(claseIds: number[]) {
@@ -413,42 +472,205 @@ export class SupabaseService {
       return { data: [], error: null };
     }
 
-    return this.client.from('inscripciones')
-      .select('clase_id, estado')
-      .in('clase_id', claseIds)
-      .neq('estado', 'cancelado');
+    return this.withQueryTimeout('getInscripcionesResumen', () =>
+      this.client.from('inscripciones')
+        .select('clase_id, estado')
+        .in('clase_id', claseIds)
+        .neq('estado', 'cancelado'),
+    );
   }
 
   async deleteInscripcionesByClase(claseId: number) {
-    return this.client.from('inscripciones')
-      .delete()
-      .eq('clase_id', claseId);
+    const result = await this.withMutationTimeout('deleteInscripcionesByClase', () =>
+      this.client.from('inscripciones')
+        .delete()
+        .eq('clase_id', claseId),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'deleteInscripcionesByClase', claseId });
+    return result;
   }
 
   async getInscripcionesByUser(userId: string) {
-    return this.client.from('inscripciones')
-      .select('*, clases(id, tipo, fecha, hora_inicio, hora_fin, capacidad_maxima, cancelada, wod_formato, wod_plan, descripcion)')
-      .eq('user_id', userId)
-      .neq('estado', 'cancelado')
-      .order('created_at', { ascending: false });
+    return this.withQueryTimeout('getInscripcionesByUser', () =>
+      this.client.from('inscripciones')
+        .select('*, clases(id, tipo, fecha, hora_inicio, hora_fin, capacidad_maxima, cancelada, wod_formato, wod_plan, descripcion)')
+        .eq('user_id', userId)
+        .neq('estado', 'cancelado')
+        .order('created_at', { ascending: false }),
+    );
   }
 
   async marcarAsistencia(inscripcionId: number, asistio: boolean) {
-    return this.client.from('inscripciones')
-      .update({ estado: asistio ? 'asistio' : 'no_asistio' })
-      .eq('id', inscripcionId);
+    const result = await this.withMutationTimeout('marcarAsistencia', () =>
+      this.client.from('inscripciones')
+        .update({ estado: asistio ? 'asistio' : 'no_asistio' })
+        .eq('id', inscripcionId),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'marcarAsistencia', inscripcionId, asistio });
+    return result;
+  }
+
+  async getAttendanceRecordsForMonth() {
+    return this.withQueryTimeout('getAttendanceRecordsForMonth', () =>
+      this.client.from('inscripciones')
+        .select('id, user_id, estado, profiles(id_cliente, nombre_completo, avatar_url), clases(fecha, cancelada)')
+        .neq('estado', 'cancelado')
+        .order('created_at', { ascending: false }),
+    );
   }
 
   // ── Auditoria ─────────────────────────────────────────────────────────────
 
   async logAuditoria(userId: string, accion: string, detalle?: Record<string, unknown>) {
-    return this.client.from('auditoria_config').insert({ user_id: userId, accion, detalle });
+    const result = await this.withMutationTimeout('logAuditoria', () =>
+      this.client.from('auditoria_config').insert({ user_id: userId, accion, detalle }),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'logAuditoria', userId, accion });
+    return result;
   }
 
   async getAuditoria(limit = 50) {
-    return this.client.from('auditoria_config')
-      .select('*, profiles(nombre_completo, rol)')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    return this.withQueryTimeout('getAuditoria', () =>
+      this.client.from('auditoria_config')
+        .select('*, profiles(nombre_completo, rol)')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    );
+  }
+
+  async getAttendanceRewardConfig() {
+    return this.withQueryTimeout('getAttendanceRewardConfig', () =>
+      this.client.from('auditoria_config')
+        .select('id, detalle, created_at, profiles(nombre_completo)')
+        .eq('accion', 'attendance_reward_config')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    );
+  }
+
+  async saveAttendanceRewardConfig(userId: string, detalle: Record<string, unknown>) {
+    const result = await this.withMutationTimeout('saveAttendanceRewardConfig', () =>
+      this.client.from('auditoria_config').insert({
+        user_id: userId,
+        accion: 'attendance_reward_config',
+        detalle,
+      }).select().single(),
+    );
+
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'saveAttendanceRewardConfig', userId });
+    }
+
+    return result;
+  }
+
+  async getRewardCatalogConfig() {
+    return this.withQueryTimeout('getRewardCatalogConfig', () =>
+      this.client.from('auditoria_config')
+        .select('id, detalle, created_at')
+        .eq('accion', 'reward_catalog_config')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    );
+  }
+
+  async saveRewardCatalogConfig(userId: string, detalle: Record<string, unknown>) {
+    const result = await this.withMutationTimeout('saveRewardCatalogConfig', () =>
+      this.client.from('auditoria_config').insert({
+        user_id: userId,
+        accion: 'reward_catalog_config',
+        detalle,
+      }).select().single(),
+    );
+
+    if (result.error) {
+      this.sentry.captureError(result.error, { action: 'saveRewardCatalogConfig', userId });
+    }
+
+    return result;
+  }
+
+  // ==================== RETOS ====================
+
+  async getRetos() {
+    return this.withQueryTimeout('getRetos', () =>
+      this.client.from('retos')
+        .select('*')
+        .eq('activo', true)
+        .order('created_at', { ascending: false }),
+    );
+  }
+
+  async getAllRetos() {
+    return this.withQueryTimeout('getAllRetos', () =>
+      this.client.from('retos')
+        .select('*')
+        .order('created_at', { ascending: false }),
+    );
+  }
+
+  async createReto(data: Record<string, unknown>) {
+    const result = await this.withMutationTimeout('createReto', () =>
+      this.client.from('retos').insert(data).select().single(),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'createReto' });
+    return result;
+  }
+
+  async updateReto(id: string, data: Record<string, unknown>) {
+    const result = await this.withMutationTimeout('updateReto', () =>
+      this.client.from('retos').update(data).eq('id', id).select().single(),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'updateReto', id });
+    return result;
+  }
+
+  async deleteReto(id: string) {
+    const result = await this.withMutationTimeout('deleteReto', () =>
+      this.client.from('retos').update({ activo: false }).eq('id', id),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'deleteReto', id });
+    return result;
+  }
+
+  async getRetoParticipantes(retoId: string) {
+    return this.withQueryTimeout('getRetoParticipantes', () =>
+      this.client.from('reto_participantes')
+        .select('*')
+        .eq('reto_id', retoId)
+        .order('inscrito_at', { ascending: true }),
+    );
+  }
+
+  async inscribirseReto(retoId: string, userId: string, nombreAtleta: string, idCliente: string) {
+    const result = await this.withMutationTimeout('inscribirseReto', () =>
+      this.client.from('reto_participantes').insert({
+        reto_id: retoId,
+        user_id: userId,
+        nombre_atleta: nombreAtleta,
+        id_cliente: idCliente,
+      }).select().single(),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'inscribirseReto', retoId });
+    return result;
+  }
+
+  async desinscribirseReto(retoId: string, userId: string) {
+    const result = await this.withMutationTimeout('desinscribirseReto', () =>
+      this.client.from('reto_participantes')
+        .delete()
+        .eq('reto_id', retoId)
+        .eq('user_id', userId),
+    );
+    if (result.error) this.sentry.captureError(result.error, { action: 'desinscribirseReto', retoId });
+    return result;
+  }
+
+  async getRetoLeaderboard(retoId: string) {
+    return this.withQueryTimeout('getRetoLeaderboard', () =>
+      this.client.rpc('get_reto_leaderboard', { p_reto_id: retoId }),
+    );
   }
 }

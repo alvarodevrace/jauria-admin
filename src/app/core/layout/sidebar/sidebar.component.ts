@@ -19,7 +19,7 @@ import { SupabaseService } from '../../services/supabase.service';
 
     <aside class="sidebar" [class.open]="mobileOpen()">
       <div class="sidebar__logo">
-        <div class="sidebar__logo-icon">J</div>
+        <img class="sidebar__logo-icon" src="assets/logo.png" alt="Jauría logo" />
         <div>
           <span class="sidebar__logo-name">Jauría</span>
           <span class="sidebar__logo-sub">Admin Panel</span>
@@ -41,6 +41,11 @@ import { SupabaseService } from '../../services/supabase.service';
           <span>Clases</span>
         </a>
 
+        <a class="sidebar__item" routerLink="/app/retos" routerLinkActive="active" (click)="close()">
+          <i-lucide class="sidebar__item-icon" name="trophy" />
+          <span>Retos</span>
+        </a>
+
         @if (auth.rol() === 'atleta') {
           <a class="sidebar__item" routerLink="/app/mi-pago" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="credit-card" />
@@ -59,14 +64,13 @@ import { SupabaseService } from '../../services/supabase.service';
 
           <a class="sidebar__item" routerLink="/app/clientes" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="users" />
-            <span>Clientes</span>
+            <span>Atletas</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/pagos" routerLinkActive="active" (click)="close()">
             <i-lucide class="sidebar__item-icon" name="wallet" />
             <span>Pagos</span>
           </a>
-
           @if (auth.canViewLeadInbox()) {
             <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
               <i-lucide class="sidebar__item-icon" name="clipboard" />
@@ -120,8 +124,18 @@ import { SupabaseService } from '../../services/supabase.service';
             <span class="sidebar__user-role">{{ auth.rol() }}</span>
           </div>
         </button>
-        <button class="sidebar__logout" (click)="auth.logout()" title="Cerrar sesión">
-          <i-lucide name="logout-2" />
+        <button
+          class="sidebar__logout"
+          (click)="auth.logout()"
+          title="Cerrar sesión"
+          [disabled]="auth.logoutInProgress()"
+          [attr.aria-busy]="auth.logoutInProgress()"
+        >
+          @if (auth.logoutInProgress()) {
+            <i-lucide class="sidebar__logout-spinner" name="loader-circle" />
+          } @else {
+            <i-lucide name="logout-2" />
+          }
         </button>
       </div>
     </aside>
@@ -141,14 +155,7 @@ import { SupabaseService } from '../../services/supabase.service';
     .sidebar__logo-icon {
       width: 36px;
       height: 36px;
-      background: #A61F24;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      color: #f4f1eb;
+      object-fit: contain;
       flex-shrink: 0;
     }
     .sidebar__logo-name {
@@ -265,6 +272,19 @@ import { SupabaseService } from '../../services/supabase.service';
       justify-content: center;
       transition: all 0.2s ease;
       &:hover { border-color: #A61F24; color: #A61F24; background: #1d2022; }
+      &:disabled {
+        cursor: wait;
+        opacity: 0.75;
+        border-color: #4a4f53;
+        color: #f4f1eb;
+        background: #1d2022;
+      }
+    }
+    .sidebar__logout-spinner {
+      animation: sidebarSpin 0.9s linear infinite;
+    }
+    @keyframes sidebarSpin {
+      to { transform: rotate(360deg); }
     }
   `],
 })

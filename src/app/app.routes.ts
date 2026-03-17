@@ -38,6 +38,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/pagos/pagos.component').then(m => m.PagosComponent),
       },
       {
+        path: 'premios',
+        loadComponent: () => import('./features/premios/premios.component').then(m => m.PremiosComponent),
+      },
+      {
+        path: 'retos',
+        loadComponent: () => import('./features/retos/retos.component').then(m => m.RetosComponent),
+      },
+      {
         path: 'conversaciones',
         canActivate: [roleGuard], data: { roles: ['admin'] },
         loadComponent: () => import('./features/conversaciones/conversaciones.component').then(m => m.ConversacionesComponent),
