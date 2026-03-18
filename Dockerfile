@@ -6,9 +6,14 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: serve with nginx
+# Stage 2: serve with nginx (non-root)
 FROM nginx:alpine AS runner
 COPY --from=builder /app/dist/jauria-admin/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+RUN touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/cache/nginx /var/run/nginx.pid /usr/share/nginx/html
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --retries=2 \
+  CMD wget -qO- http://localhost:8080/index.html || exit 1
+USER nginx
 CMD ["nginx", "-g", "daemon off;"]
