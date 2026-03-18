@@ -14,6 +14,10 @@ export class CoolifyService {
     return this.http.get(`${this.base}/services`);
   }
 
+  getEnvVars(serviceUuid: string) {
+    return this.http.get<CoolifyEnvVar[]>(`${this.base}/services/${serviceUuid}/envs`);
+  }
+
   updateEnvVars(serviceUuid: string, vars: EnvVar[]) {
     return this.http.patch(`${this.base}/services/${serviceUuid}/envs/bulk`, { data: vars });
   }
@@ -30,6 +34,14 @@ export class CoolifyService {
 export interface EnvVar {
   key: string;
   value: string;
+}
+
+export interface CoolifyEnvVar {
+  uuid: string;
+  key: string;
+  value: string;
+  is_buildtime: boolean;
+  is_runtime: boolean;
 }
 
 export const N8N_ENV_UUIDS: Record<string, string> = {
