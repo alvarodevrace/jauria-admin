@@ -1,8 +1,8 @@
 export const environment = {
   production: true,
   supabaseUrl: 'https://bxatcmcommoqnxnyqchu.supabase.co',
-  supabaseAnonKey: '', // Set via CI/CD secret: SUPABASE_ANON_KEY
-  backendApiUrl: '', // Set via CI/CD secret or file replacement once backend domain is deployed
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4YXRjbWNvbW1vcW54bnlxY2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTczNDQsImV4cCI6MjA4Nzc5MzM0NH0.rhB-c1NP5YIUzIgMptKlFM8RKewIDaapwM8DxwPyntg',
+  backendApiUrl: 'https://api.alvarodevrace.tech/api/v1',
   externalOpsChecksEnabled: true,
   // GlitchTip DSN — actualizar cuando DNS glitchtip.alvarodevrace.tech esté configurado
   sentryEnabled: true,
