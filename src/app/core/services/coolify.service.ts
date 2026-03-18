@@ -1,46 +1,28 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, timeout } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 const N8N_SERVICE_UUID = 'rwk0w08ggswcssc4c4ow4gwk';
-const EVOLUTION_SERVICE_UUID = 'dsg88c0wgsw0o0cs4400oc8s';
 
 @Injectable({ providedIn: 'root' })
 export class CoolifyService {
-  private readonly base = environment.coolifyUrl;
-  private readonly requestTimeoutMs = 15000;
-  private readonly headers = new HttpHeaders({
-    Authorization: `Bearer ${environment.coolifyToken}`,
-    'Content-Type': 'application/json',
-  });
+  private readonly base = `${environment.backendApiUrl}/infra`;
 
   constructor(private http: HttpClient) {}
 
-  getN8nService(): Observable<unknown> {
-    return this.http.get(`${this.base}/services/${N8N_SERVICE_UUID}`, { headers: this.headers }).pipe(timeout(this.requestTimeoutMs));
+  getServices() {
+    return this.http.get(`${this.base}/services`);
   }
 
-  getEvolutionService(): Observable<unknown> {
-    return this.http.get(`${this.base}/services/${EVOLUTION_SERVICE_UUID}`, { headers: this.headers }).pipe(timeout(this.requestTimeoutMs));
+  updateEnvVars(serviceUuid: string, vars: EnvVar[]) {
+    return this.http.patch(`${this.base}/services/${serviceUuid}/envs/bulk`, { data: vars });
   }
 
-  updateEnvVars(serviceUuid: string, vars: EnvVar[]): Observable<unknown> {
-    return this.http.patch(
-      `${this.base}/services/${serviceUuid}/envs/bulk`,
-      { data: vars },
-      { headers: this.headers }
-    ).pipe(timeout(this.requestTimeoutMs));
+  restartService(serviceUuid: string) {
+    return this.http.post(`${this.base}/services/${serviceUuid}/restart`, {});
   }
 
-  restartService(serviceUuid: string): Observable<unknown> {
-    return this.http.get(
-      `${this.base}/services/${serviceUuid}/restart`,
-      { headers: this.headers }
-    ).pipe(timeout(this.requestTimeoutMs));
-  }
-
-  updateN8nEnvVar(key: string, value: string): Observable<unknown> {
+  updateN8nEnvVar(key: string, value: string) {
     return this.updateEnvVars(N8N_SERVICE_UUID, [{ key, value }]);
   }
 }

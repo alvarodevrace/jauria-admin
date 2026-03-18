@@ -99,7 +99,7 @@ interface AuditRow {
       <div class="data-table-wrapper">
         <div class="data-table-wrapper__header">
           <span class="data-table-wrapper__title">Audit Log</span>
-          <button class="btn btn--ghost btn--sm" (click)="loadAudit()">↻</button>
+          <button class="btn btn--ghost btn--sm" (click)="loadAudit()" [disabled]="auditLoading()">↻</button>
         </div>
         @if (auditLoading()) {
           <div style="padding:40px;text-align:center;color:#938C84;">Cargando...</div>
@@ -169,9 +169,19 @@ export class ConfiguracionComponent implements OnInit {
 
   async loadAudit() {
     this.auditLoading.set(true);
-    const { data } = await this.supabase.getAuditoria(30);
-    this.auditLoading.set(false);
-    this.auditRows.set((data ?? []) as unknown as AuditRow[]);
+    try {
+      const { data, error } = await this.supabase.getAuditoria(30);
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.auditRows.set((data ?? []) as unknown as AuditRow[]);
+    } catch {
+      this.toast.error('No se pudo cargar el audit log');
+    } finally {
+      this.auditLoading.set(false);
+    }
   }
 
   async onSave() {

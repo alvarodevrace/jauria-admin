@@ -6,9 +6,10 @@ import { filter } from 'rxjs';
 const ROUTE_TITLES: Record<string, string> = {
   '/app/novedades':      'Novedades',
   '/app/dashboard':      'Dashboard',
-  '/app/clientes':       'Clientes',
+  '/app/clientes':       'Atletas',
   '/app/clases':         'Clases',
   '/app/pagos':          'Pagos',
+  '/app/premios':        'Retos',
   '/app/conversaciones': 'Conversaciones WhatsApp',
   '/app/leads':          'Leads',
   '/app/configuracion':  'Configuración',
@@ -16,7 +17,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/app/workflows':      'Workflows n8n',
   '/app/mi-cuenta':      'Mi Cuenta',
   '/app/mi-pago':        'Mi Pago',
-  '/app/roles':          'Gestión de Roles',
+  '/app/roles':          'Usuarios',
 };
 
 @Component({

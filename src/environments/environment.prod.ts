@@ -3,12 +3,6 @@ export const environment = {
   supabaseUrl: 'https://bxatcmcommoqnxnyqchu.supabase.co',
   supabaseAnonKey: '', // Set via CI/CD secret: SUPABASE_ANON_KEY
   backendApiUrl: '', // Set via CI/CD secret or file replacement once backend domain is deployed
-  n8nApiUrl: 'https://n8n.alvarodevrace.tech/api/v1',
-  n8nApiKey: '', // Set via CI/CD secret: N8N_API_KEY
-  coolifyUrl: 'https://coolify.alvarodevrace.tech/api/v1',
-  coolifyToken: '', // Set via CI/CD secret: COOLIFY_TOKEN
-  evolutionApiUrl: 'https://evolution.alvarodevrace.tech',
-  evolutionApiKey: '', // Set via CI/CD secret: EVOLUTION_API_KEY
   externalOpsChecksEnabled: true,
   // GlitchTip DSN — actualizar cuando DNS glitchtip.alvarodevrace.tech esté configurado
   sentryEnabled: true,

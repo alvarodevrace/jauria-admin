@@ -1,22 +1,22 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, LucideAngularModule],
   template: `
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-card__header">
-          <h1 class="auth-card__title">JAURÍA</h1>
+          <img class="auth-card__logo" src="assets/logo.png" alt="Jauría CrossFit" />
           <p class="auth-card__subtitle">Ingreso al panel</p>
         </div>
 
         <div class="auth-card__notice">
-          <strong>Coach y admin:</strong> ingresa con tu cuenta del panel.
           Si eres atleta nuevo, activa tu cuenta solo después de que el coach registre tu membresía.
         </div>
 
@@ -42,16 +42,27 @@ import { AuthService } from '../../../core/auth/auth.service';
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
-            <input
-              id="password"
-              type="password"
-              class="form-control"
-              placeholder="••••••••"
-              [(ngModel)]="password"
-              name="password"
-              required
-              autocomplete="current-password"
-            />
+            <div class="auth-form__password-wrap">
+              <input
+                id="password"
+                [type]="mostrarPassword() ? 'text' : 'password'"
+                class="form-control auth-form__password-input"
+                placeholder="••••••••"
+                [(ngModel)]="password"
+                name="password"
+                required
+                autocomplete="current-password"
+              />
+              <button
+                type="button"
+                class="auth-form__password-toggle"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                [attr.aria-pressed]="mostrarPassword()"
+              >
+                <i-lucide [name]="mostrarPassword() ? 'eye-off' : 'eye'" />
+              </button>
+            </div>
           </div>
 
           @if (error()) {
@@ -80,38 +91,40 @@ import { AuthService } from '../../../core/auth/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0e0f10;
+      background:
+        radial-gradient(circle at top, rgba(166, 31, 36, 0.2), transparent 38%),
+        linear-gradient(160deg, #0b0c0d 0%, #111315 48%, #171a1c 100%);
       padding: 24px;
     }
 
     .auth-card {
-      background: #151718;
-      border: 1px solid #2b3033;
-      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(21, 23, 24, 0.96), rgba(17, 19, 20, 0.98));
+      border: 1px solid rgba(244, 241, 235, 0.08);
+      border-radius: 24px;
       padding: 40px;
       width: 100%;
-      max-width: 400px;
+      max-width: 430px;
+      box-shadow: 0 28px 64px rgba(0, 0, 0, 0.42);
 
       &__header {
         text-align: center;
-        margin-bottom: 32px;
+        margin-bottom: 28px;
       }
 
-      &__title {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 48px;
-        letter-spacing: 0.1em;
-        color: #a61f24;
-        margin: 0;
+      &__logo {
+        width: 148px;
+        height: auto;
+        display: block;
+        margin: 0 auto 18px;
       }
 
       &__subtitle {
         font-family: 'Manrope', sans-serif;
-        font-size: 13px;
+        font-size: 12px;
         color: #938c84;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
-        margin-top: 4px;
+        margin: 0;
       }
 
       &__footer {
@@ -132,8 +145,8 @@ import { AuthService } from '../../../core/auth/auth.service';
         margin-bottom: 20px;
         padding: 14px 16px;
         border-left: 3px solid #a61f24;
-        background: #1d2022;
-        border-radius: 8px;
+        background: rgba(29, 32, 34, 0.92);
+        border-radius: 12px;
         font-family: 'Manrope', sans-serif;
         font-size: 12px;
         line-height: 1.6;
@@ -177,12 +190,62 @@ import { AuthService } from '../../../core/auth/auth.service';
         padding: 12px;
         font-size: 14px;
       }
+
+      &__password-wrap {
+        position: relative;
+      }
+
+      &__password-input {
+        padding-right: 52px;
+      }
+
+      &__password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        width: 34px;
+        height: 34px;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: #938c84;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: color 0.2s ease, background 0.2s ease;
+
+        &:hover {
+          color: #f4f1eb;
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        &:focus-visible {
+          outline: 2px solid rgba(166, 31, 36, 0.4);
+          outline-offset: 1px;
+        }
+      }
     }
 
     .auth-card__footer--stack {
       display: flex;
       flex-direction: column;
       gap: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .auth-page {
+        padding: 16px;
+      }
+
+      .auth-card {
+        padding: 28px 20px;
+
+        &__logo {
+          width: 126px;
+        }
+      }
     }
   `],
 })
@@ -191,6 +254,7 @@ export class LoginComponent {
   password = '';
   loading = signal(false);
   error = signal('');
+  mostrarPassword = signal(false);
 
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -212,5 +276,9 @@ export class LoginComponent {
     const dest = rol === 'coach' || rol === 'admin' ? '/app/dashboard' : '/app/novedades';
     await this.router.navigate([dest]);
     this.loading.set(false);
+  }
+
+  togglePasswordVisibility() {
+    this.mostrarPassword.update((visible) => !visible);
   }
 }

@@ -1,19 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class N8nService {
-  private readonly base = environment.backendApiUrl
-    ? `${environment.backendApiUrl}/n8n`
-    : environment.n8nApiUrl;
-  private readonly headers = environment.backendApiUrl
-    ? new HttpHeaders({ 'Content-Type': 'application/json' })
-    : new HttpHeaders({
-        'X-N8N-API-KEY': environment.n8nApiKey,
-        'Content-Type': 'application/json',
-      });
+  private readonly base = `${environment.backendApiUrl}/n8n`;
+  private readonly headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+  private readonly requestTimeoutMs = 20000;
 
   constructor(private http: HttpClient) {}
 
@@ -21,14 +15,14 @@ export class N8nService {
     return this.http.get<{ data: WorkflowSummary[] }>(
       `${this.base}/workflows`,
       { headers: this.headers }
-    );
+    ).pipe(timeout(this.requestTimeoutMs));
   }
 
   getWorkflow(id: string): Observable<WorkflowDetail> {
     return this.http.get<WorkflowDetail>(
       `${this.base}/workflows/${id}`,
       { headers: this.headers }
-    );
+    ).pipe(timeout(this.requestTimeoutMs));
   }
 
   activateWorkflow(id: string): Observable<unknown> {
@@ -36,7 +30,7 @@ export class N8nService {
       `${this.base}/workflows/${id}/activate`,
       {},
       { headers: this.headers }
-    );
+    ).pipe(timeout(this.requestTimeoutMs));
   }
 
   deactivateWorkflow(id: string): Observable<unknown> {
@@ -44,13 +38,13 @@ export class N8nService {
       `${this.base}/workflows/${id}/deactivate`,
       {},
       { headers: this.headers }
-    );
+    ).pipe(timeout(this.requestTimeoutMs));
   }
 
   getExecutions(workflowId?: string, limit = 10): Observable<{ data: Execution[] }> {
     let url = `${this.base}/executions?limit=${limit}`;
     if (workflowId) url += `&workflowId=${workflowId}`;
-    return this.http.get<{ data: Execution[] }>(url, { headers: this.headers });
+    return this.http.get<{ data: Execution[] }>(url, { headers: this.headers }).pipe(timeout(this.requestTimeoutMs));
   }
 
   runWorkflow(id: string, payload: Record<string, unknown>): Observable<unknown> {
@@ -58,7 +52,7 @@ export class N8nService {
       `${this.base}/workflows/${id}/run`,
       payload,
       { headers: this.headers }
-    );
+    ).pipe(timeout(this.requestTimeoutMs));
   }
 }
 

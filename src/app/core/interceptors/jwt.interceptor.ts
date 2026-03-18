@@ -7,12 +7,8 @@ import { environment } from '../../../environments/environment';
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
 
-  // Only add JWT to API calls (not Google Fonts, CDNs, etc.)
   const isApiCall = req.url.includes('supabase.co') ||
-    (environment.backendApiUrl ? req.url.includes(environment.backendApiUrl) : false) ||
-    req.url.includes('n8n.alvarodevrace.tech') ||
-    req.url.includes('coolify.alvarodevrace.tech') ||
-    req.url.includes('evolution.alvarodevrace.tech');
+    (environment.backendApiUrl ? req.url.includes(environment.backendApiUrl) : false);
 
   if (!isApiCall) return next(req);
 

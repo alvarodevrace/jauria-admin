@@ -22,7 +22,6 @@ type WodBlockKey = 'warmup' | 'accessories' | 'main';
 
 interface WodChip {
   label: string;
-  tooltip?: string | null;
 }
 
 interface WodPlan {
@@ -226,8 +225,7 @@ const CLASE_THEME = {
             <div class="week-calendar__col" [class.today]="dia.esHoy">
               @for (clase of clasesDelDia(dia.fecha); track clase.id) {
                 <div
-                  class="week-event"
-                  [class]="'week-event--' + tipoClass(clase.tipo)"
+                  [ngClass]="['week-event', 'week-event--' + tipoClass(clase.tipo)]"
                   (click)="verClase(clase)"
                 >
                   <div class="week-event__time">
@@ -353,15 +351,16 @@ const CLASE_THEME = {
                         <button
                           class="btn btn--danger btn--sm"
                           (click)="cancelarClase(c)"
-                          [disabled]="c.cancelada"
+                          [disabled]="c.cancelada || isActionBusy('cancel', c.id) || isActionBusy('delete', c.id)"
                         >
-                          {{ c.cancelada ? 'Cancelada' : 'Cancelar' }}
+                          {{ isActionBusy('cancel', c.id) ? 'Cancelando...' : (c.cancelada ? 'Cancelada' : 'Cancelar') }}
                         </button>
                         <button
                           class="btn btn--ghost btn--sm"
                           (click)="eliminarClase(c)"
+                          [disabled]="isActionBusy('cancel', c.id) || isActionBusy('delete', c.id)"
                         >
-                          Eliminar
+                          {{ isActionBusy('delete', c.id) ? 'Eliminando...' : 'Eliminar' }}
                         </button>
                       }
                     </div>
@@ -457,104 +456,123 @@ const CLASE_THEME = {
                   />
                 </div>
                 <div class="form-group clases-form-group--full">
-                  <label class="form-label">Calentamiento</label>
-                  <div class="wod-chip-builder">
-                    <input
-                      class="form-control"
-                      type="text"
-                      [(ngModel)]="chipDrafts.warmup.label"
-                      name="warmupLabel"
-                      placeholder="Ej: 400m run"
-                    />
-                    <input
-                      class="form-control"
-                      type="text"
-                      [(ngModel)]="chipDrafts.warmup.tooltip"
-                      name="warmupTooltip"
-                      placeholder="Tooltip opcional"
-                    />
-                    <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('warmup')">Agregar</button>
-                  </div>
-                  <div class="wod-chip-list">
-                    @for (chip of newClase.wod_plan.warmup; track chip.label + $index) {
-                      <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('warmup', $index)">
-                        <span>{{ chip.label }}</span>
-                        <i-lucide name="circle-x" />
-                      </button>
-                    } @empty {
-                      <div class="wod-empty-copy">Sin calentamiento cargado.</div>
-                    }
+                  <div class="wod-optional-sections">
+                    <div class="wod-optional-sections__label">Bloques opcionales</div>
+                    <div class="wod-optional-sections__actions">
+                      @if (!isOptionalBlockActive('warmup')) {
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="activateOptionalBlock('warmup')">
+                          + Calentamiento
+                        </button>
+                      }
+                      @if (!isOptionalBlockActive('accessories')) {
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="activateOptionalBlock('accessories')">
+                          + Accesorios
+                        </button>
+                      }
+                    </div>
                   </div>
                 </div>
+                @if (isOptionalBlockActive('warmup')) {
+                  <div class="form-group clases-form-group--full">
+                    <div class="wod-section-card">
+                      <div class="wod-section-card__header">
+                        <label class="form-label">Calentamiento</label>
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="deactivateOptionalBlock('warmup')">
+                          Quitar bloque
+                        </button>
+                      </div>
+                      <div class="wod-chip-builder">
+                        <input
+                          class="form-control"
+                          type="text"
+                          [(ngModel)]="chipDrafts.warmup.label"
+                          name="warmupLabel"
+                          placeholder="Ej: 400m run"
+                        />
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('warmup')">Agregar</button>
+                      </div>
+                      <div class="wod-chip-list">
+                        @for (chip of newClase.wod_plan.warmup; track chip.label + $index) {
+                          <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('warmup', $index)">
+                            <span>{{ chip.label }}</span>
+                            <i-lucide name="circle-x" />
+                          </button>
+                        } @empty {
+                          <div class="wod-empty-copy">Agrega solo si el WOD necesita una entrada guiada.</div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+                @if (isOptionalBlockActive('accessories')) {
+                  <div class="form-group clases-form-group--full">
+                    <div class="wod-section-card">
+                      <div class="wod-section-card__header">
+                        <label class="form-label">Accesorios</label>
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="deactivateOptionalBlock('accessories')">
+                          Quitar bloque
+                        </button>
+                      </div>
+                      <div class="wod-chip-builder">
+                        <input
+                          class="form-control"
+                          type="text"
+                          [(ngModel)]="chipDrafts.accessories.label"
+                          name="accessoryLabel"
+                          placeholder="Ej: 3x12 strict press"
+                        />
+                        <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('accessories')">Agregar</button>
+                      </div>
+                      <div class="wod-chip-list">
+                        @for (chip of newClase.wod_plan.accessories; track chip.label + $index) {
+                          <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('accessories', $index)">
+                            <span>{{ chip.label }}</span>
+                            <i-lucide name="circle-x" />
+                          </button>
+                        } @empty {
+                          <div class="wod-empty-copy">Úsalo para fuerza, técnica o trabajo complementario.</div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
                 <div class="form-group clases-form-group--full">
-                  <label class="form-label">Accesorios</label>
-                  <div class="wod-chip-builder">
-                    <input
-                      class="form-control"
-                      type="text"
-                      [(ngModel)]="chipDrafts.accessories.label"
-                      name="accessoryLabel"
-                      placeholder="Ej: 3x12 strict press"
-                    />
-                    <input
-                      class="form-control"
-                      type="text"
-                      [(ngModel)]="chipDrafts.accessories.tooltip"
-                      name="accessoryTooltip"
-                      placeholder="Tooltip opcional"
-                    />
-                    <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('accessories')">Agregar</button>
+                  <div class="wod-section-card wod-section-card--primary">
+                    <div class="wod-section-card__header">
+                      <label class="form-label">WOD central</label>
+                      <span class="wod-section-card__meta">Bloque obligatorio</span>
+                    </div>
+                    <div class="wod-chip-builder">
+                      <input
+                        class="form-control"
+                        type="text"
+                        [(ngModel)]="chipDrafts.main.label"
+                        name="mainLabel"
+                        placeholder="Ej: 12 thrusters + 12 pull-ups"
+                      />
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('main')">Agregar</button>
+                    </div>
+                    <div class="wod-chip-list">
+                      @for (chip of newClase.wod_plan.main.items; track chip.label + $index) {
+                        <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('main', $index)">
+                          <span>{{ chip.label }}</span>
+                          <i-lucide name="circle-x" />
+                        </button>
+                      } @empty {
+                        <div class="wod-empty-copy">Agrega al menos un bloque al WOD central.</div>
+                      }
+                    </div>
+                    <div class="wod-section-card__notes">
+                      <label class="form-label">Notas del WOD</label>
+                      <textarea
+                        class="form-control"
+                        [(ngModel)]="newClase.wod_plan.main.notes"
+                        name="wodNotes"
+                        rows="3"
+                        placeholder="Escalas, score target o aclaraciones del día."
+                      ></textarea>
+                    </div>
                   </div>
-                  <div class="wod-chip-list">
-                    @for (chip of newClase.wod_plan.accessories; track chip.label + $index) {
-                      <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('accessories', $index)">
-                        <span>{{ chip.label }}</span>
-                        <i-lucide name="circle-x" />
-                      </button>
-                    } @empty {
-                      <div class="wod-empty-copy">Sin accesorios cargados.</div>
-                    }
-                  </div>
-                </div>
-                <div class="form-group clases-form-group--full">
-                  <label class="form-label">WOD central</label>
-                  <div class="wod-chip-builder">
-                    <input
-                      class="form-control"
-                      type="text"
-                      [(ngModel)]="chipDrafts.main.label"
-                      name="mainLabel"
-                      placeholder="Ej: 12 thrusters + 12 pull-ups"
-                    />
-                    <input
-                      class="form-control"
-                      type="text"
-                      [(ngModel)]="chipDrafts.main.tooltip"
-                      name="mainTooltip"
-                      placeholder="Tooltip opcional"
-                    />
-                    <button type="button" class="btn btn--ghost btn--sm" (click)="addChip('main')">Agregar</button>
-                  </div>
-                  <div class="wod-chip-list">
-                    @for (chip of newClase.wod_plan.main.items; track chip.label + $index) {
-                      <button type="button" class="wod-detail__chip wod-detail__chip--editable" [title]="chipTooltip(chip)" (click)="removeChip('main', $index)">
-                        <span>{{ chip.label }}</span>
-                        <i-lucide name="circle-x" />
-                      </button>
-                    } @empty {
-                      <div class="wod-empty-copy">Agrega al menos un bloque al WOD central.</div>
-                    }
-                  </div>
-                </div>
-                <div class="form-group clases-form-group--full">
-                  <label class="form-label">Notas del WOD</label>
-                  <textarea
-                    class="form-control"
-                    [(ngModel)]="newClase.wod_plan.main.notes"
-                    name="wodNotes"
-                    rows="3"
-                    placeholder="Escalas, score target o aclaraciones del día."
-                  ></textarea>
                 </div>
               </div>
               <div class="modal__footer clases-modal-footer">
@@ -661,25 +679,50 @@ const CLASE_THEME = {
                 Inscritos ({{ inscritos().length }} /
                 {{ claseSeleccionada()!.capacidad_maxima }})
               </span>
-              <button
-                class="btn btn--primary btn--sm"
-                (click)="inscribirseOCancelar(claseSeleccionada()!)"
-                [disabled]="
-                  loadingClase() === claseSeleccionada()!.id ||
-                  (!inscritoEn(claseSeleccionada()!.id) && !membresiaActiva())
-                "
-                [title]="
-                  !membresiaActiva() && !inscritoEn(claseSeleccionada()!.id)
-                    ? 'Membresía no activa'
-                    : ''
-                "
-              >
-                {{
-                  inscritoEn(claseSeleccionada()!.id)
-                    ? 'Cancelar inscripción'
-                    : 'Inscribirse'
-                }}
-              </button>
+              <div class="clases-modal-summary__actions">
+                <button
+                  class="btn btn--primary btn--sm"
+                  (click)="inscribirseOCancelar(claseSeleccionada()!)"
+                  [disabled]="
+                    loadingClase() === claseSeleccionada()!.id ||
+                    (!inscritoEn(claseSeleccionada()!.id) && !membresiaActiva())
+                  "
+                  [title]="
+                    !membresiaActiva() && !inscritoEn(claseSeleccionada()!.id)
+                      ? 'Membresía no activa'
+                      : ''
+                  "
+                >
+                  {{
+                    inscritoEn(claseSeleccionada()!.id)
+                      ? 'Cancelar inscripción'
+                      : 'Inscribirse'
+                  }}
+                </button>
+                @if (auth.isCoach()) {
+                  <button
+                    class="btn btn--danger btn--sm"
+                    (click)="cancelarClase(claseSeleccionada()!)"
+                    [disabled]="
+                      claseSeleccionada()!.cancelada ||
+                      isActionBusy('cancel', claseSeleccionada()!.id) ||
+                      isActionBusy('delete', claseSeleccionada()!.id)
+                    "
+                  >
+                    {{ isActionBusy('cancel', claseSeleccionada()!.id) ? 'Cancelando...' : (claseSeleccionada()!.cancelada ? 'Cancelada' : 'Cancelar') }}
+                  </button>
+                  <button
+                    class="btn btn--ghost btn--sm"
+                    (click)="eliminarClase(claseSeleccionada()!)"
+                    [disabled]="
+                      isActionBusy('cancel', claseSeleccionada()!.id) ||
+                      isActionBusy('delete', claseSeleccionada()!.id)
+                    "
+                  >
+                    {{ isActionBusy('delete', claseSeleccionada()!.id) ? 'Eliminando...' : 'Eliminar' }}
+                  </button>
+                }
+              </div>
             </div>
 
             @if (inscritosLoading()) {
@@ -734,7 +777,7 @@ const CLASE_THEME = {
                             <button
                               class="btn btn--sm btn--ghost"
                               (click)="marcarAsistencia(ins.id, true)"
-                              [disabled]="ins.estado === 'asistio'"
+                              [disabled]="ins.estado === 'asistio' || isActionBusy('attendance', ins.id)"
                               title="Asistió"
                             >
                               Asistió
@@ -742,7 +785,7 @@ const CLASE_THEME = {
                             <button
                               class="btn btn--sm btn--danger"
                               (click)="marcarAsistencia(ins.id, false)"
-                              [disabled]="ins.estado === 'no_asistio'"
+                              [disabled]="ins.estado === 'no_asistio' || isActionBusy('attendance', ins.id)"
                               title="No asistió"
                             >
                               No asistió
@@ -830,6 +873,61 @@ const CLASE_THEME = {
       .clases-modal-footer {
         margin-top: 20px;
         padding: 0;
+      }
+      .wod-optional-sections {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border: 1px dashed rgba(147, 140, 132, 0.32);
+        border-radius: 14px;
+        background: rgba(244, 241, 235, 0.03);
+      }
+      .wod-optional-sections__label {
+        color: #938c84;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .wod-optional-sections__actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .wod-section-card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid rgba(244, 241, 235, 0.08);
+        background: rgba(29, 32, 34, 0.84);
+      }
+      .wod-section-card--primary {
+        border-color: rgba(166, 31, 36, 0.26);
+        background: rgba(166, 31, 36, 0.08);
+      }
+      .wod-section-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .wod-section-card__meta {
+        color: #938c84;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .wod-section-card__notes {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
       .wod-table-cell {
         display: flex;
@@ -977,6 +1075,13 @@ const CLASE_THEME = {
         justify-content: space-between;
         gap: 16px;
         margin-bottom: 16px;
+      }
+      .clases-modal-summary__actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
       .clases-athlete-summary {
         display: grid;
@@ -1140,6 +1245,19 @@ const CLASE_THEME = {
           flex-direction: column;
           align-items: stretch;
         }
+        .clases-modal-summary__actions {
+          justify-content: stretch;
+        }
+        .wod-optional-sections {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .wod-optional-sections__actions {
+          justify-content: stretch;
+        }
+        .wod-section-card__header {
+          align-items: flex-start;
+        }
         .wod-chip-builder {
           grid-template-columns: 1fr;
         }
@@ -1167,16 +1285,21 @@ export class ClasesComponent implements OnInit {
   inscritosLoading = signal(false);
   savingClase = signal(false);
   loadingClase = signal<number | null>(null);
+  actionLoading = signal<Record<string, boolean>>({});
 
   vista = signal<Vista>('semana');
   showFormClase = signal(false);
   claseSeleccionada = signal<Clase | null>(null);
   filterFormato = signal('');
   readonly wodFormatOptions = WOD_FORMAT_OPTIONS;
+  optionalBlocks = signal<Record<Exclude<WodBlockKey, 'main'>, boolean>>({
+    warmup: false,
+    accessories: false,
+  });
   chipDrafts = {
-    warmup: { label: '', tooltip: '' },
-    accessories: { label: '', tooltip: '' },
-    main: { label: '', tooltip: '' },
+    warmup: { label: '' },
+    accessories: { label: '' },
+    main: { label: '' },
   };
 
   // Semana actual
@@ -1285,7 +1408,7 @@ export class ClasesComponent implements OnInit {
     const lunes = formatEcuadorDate(this.semanaBase(), 'yyyy-MM-dd');
     const domingo = formatEcuadorDate(addDays(this.semanaBase(), 6), 'yyyy-MM-dd');
     const hoy = getEcuadorTodayYmd();
-    const fechaInicio = lunes < hoy ? hoy : lunes;
+    const fechaInicio = this.auth.isCoach() ? lunes : (lunes < hoy ? hoy : lunes);
 
     if (fechaInicio > domingo) {
       this.clases.set([]);
@@ -1383,6 +1506,7 @@ export class ClasesComponent implements OnInit {
   }
 
   esClaseVisible(clase: Pick<Clase, 'fecha' | 'hora_inicio' | 'hora_fin'>): boolean {
+    if (this.auth.isCoach()) return true;
     return this.claseEnd(clase).getTime() > new Date().getTime();
   }
 
@@ -1417,6 +1541,7 @@ export class ClasesComponent implements OnInit {
   abrirFormClase() {
     this.newClase = this.emptyClase();
     this.resetChipDrafts();
+    this.resetOptionalBlocks();
     this.showFormClase.set(true);
   }
 
@@ -1426,12 +1551,33 @@ export class ClasesComponent implements OnInit {
       return;
     }
 
+    const inicioClase = parseEcuadorDateTime(
+      this.newClase.fecha,
+      this.newClase.hora_inicio,
+    );
+    const finClase = parseEcuadorDateTime(
+      this.newClase.fecha,
+      this.newClase.hora_fin,
+    );
+    const ahora = getEcuadorNow();
+
+    if (finClase.getTime() <= inicioClase.getTime()) {
+      this.toast.warning('La hora de fin debe ser posterior a la hora de inicio.');
+      return;
+    }
+
+    if (inicioClase.getTime() <= ahora.getTime()) {
+      this.toast.warning('No puedes crear un WOD en una fecha u hora que ya pasó.');
+      return;
+    }
+
     this.savingClase.set(true);
     try {
       const coachId = this.auth.currentUser()?.id;
       const { error } = await this.supabase.createClase({
         ...this.newClase,
         tipo: 'WOD',
+        cancelada: false,
         descripcion: this.buildDescription(this.newClase.wod_plan),
         wod_formato: this.newClase.wod_formato,
         wod_plan: this.newClase.wod_plan,
@@ -1446,6 +1592,7 @@ export class ClasesComponent implements OnInit {
       this.showFormClase.set(false);
       this.newClase = this.emptyClase();
       this.resetChipDrafts();
+      this.resetOptionalBlocks();
       await this.cargarClases();
     } catch {
       this.toast.error('No se pudo guardar la clase');
@@ -1458,9 +1605,19 @@ export class ClasesComponent implements OnInit {
     this.claseSeleccionada.set(clase);
     this.inscritos.set([]);
     this.inscritosLoading.set(true);
-    const { data } = await this.supabase.getInscripcionesByClase(clase.id);
-    this.inscritosLoading.set(false);
-    this.inscritos.set((data ?? []) as unknown as Inscripcion[]);
+    try {
+      const { data, error } = await this.supabase.getInscripcionesByClase(clase.id);
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.inscritos.set((data ?? []) as unknown as Inscripcion[]);
+    } catch {
+      this.toast.error('No se pudieron cargar los inscritos');
+    } finally {
+      this.inscritosLoading.set(false);
+    }
   }
 
   async inscribirseOCancelar(clase: Clase) {
@@ -1555,38 +1712,54 @@ export class ClasesComponent implements OnInit {
   }
 
   async marcarAsistencia(inscripcionId: number, asistio: boolean) {
-    const { error } = await this.supabase.marcarAsistencia(
-      inscripcionId,
-      asistio,
-    );
-    if (error) {
-      this.toast.error(error.message);
-      return;
+    this.setActionBusy('attendance', inscripcionId, true);
+    try {
+      const { error } = await this.supabase.marcarAsistencia(
+        inscripcionId,
+        asistio,
+      );
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+      this.inscritos.update((list) =>
+        list.map((i) =>
+          i.id === inscripcionId
+            ? { ...i, estado: asistio ? 'asistio' : 'no_asistio' }
+            : i,
+        ),
+      );
+      this.toast.success(
+        asistio ? 'Asistencia confirmada' : 'Marcado como ausente',
+      );
+    } catch {
+      this.toast.error('No se pudo registrar la asistencia');
+    } finally {
+      this.setActionBusy('attendance', inscripcionId, false);
     }
-    this.inscritos.update((list) =>
-      list.map((i) =>
-        i.id === inscripcionId
-          ? { ...i, estado: asistio ? 'asistio' : 'no_asistio' }
-          : i,
-      ),
-    );
-    this.toast.success(
-      asistio ? 'Asistencia confirmada' : 'Marcado como ausente',
-    );
   }
 
   async cancelarClase(clase: Clase) {
+    if (this.isActionBusy('cancel', clase.id) || this.isActionBusy('delete', clase.id)) return;
+
     const motivo = prompt('Motivo de cancelación (opcional):') ?? '';
-    const { error } = await this.supabase.updateClase(clase.id, {
-      cancelada: true,
-      motivo_cancelacion: motivo,
-    });
-    if (error) {
-      this.toast.error(error.message);
-      return;
+    this.setActionBusy('cancel', clase.id, true);
+    try {
+      const { error } = await this.supabase.updateClase(clase.id, {
+        cancelada: true,
+        motivo_cancelacion: motivo,
+      });
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+      this.toast.info('Clase cancelada');
+      await this.cargarClases();
+    } catch {
+      this.toast.error('No se pudo cancelar la clase');
+    } finally {
+      this.setActionBusy('cancel', clase.id, false);
     }
-    this.toast.info('Clase cancelada');
-    await this.cargarClases();
   }
 
   async eliminarClase(clase: Clase) {
@@ -1600,27 +1773,50 @@ export class ClasesComponent implements OnInit {
 
     if (!confirmacion) return;
 
-    const { error: inscripcionesError } = await this.supabase.deleteInscripcionesByClase(
-      clase.id,
-    );
+    this.setActionBusy('delete', clase.id, true);
+    try {
+      const { error: inscripcionesError } = await this.supabase.deleteInscripcionesByClase(
+        clase.id,
+      );
 
-    if (inscripcionesError) {
-      this.toast.error(inscripcionesError.message);
-      return;
+      if (inscripcionesError) {
+        this.toast.error(inscripcionesError.message);
+        return;
+      }
+
+      const { error } = await this.supabase.deleteClase(clase.id);
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      if (this.claseSeleccionada()?.id === clase.id) {
+        this.claseSeleccionada.set(null);
+      }
+
+      this.toast.success('Clase eliminada');
+      await Promise.all([this.cargarMisInscripciones(), this.cargarClases()]);
+    } catch {
+      this.toast.error('No se pudo eliminar la clase');
+    } finally {
+      this.setActionBusy('delete', clase.id, false);
     }
+  }
 
-    const { error } = await this.supabase.deleteClase(clase.id);
-    if (error) {
-      this.toast.error(error.message);
-      return;
-    }
+  isActionBusy(action: string, id: number) {
+    return this.actionLoading()[`${action}:${id}`] === true;
+  }
 
-    if (this.claseSeleccionada()?.id === clase.id) {
-      this.claseSeleccionada.set(null);
-    }
+  private setActionBusy(action: string, id: number, busy: boolean) {
+    const key = `${action}:${id}`;
+    this.actionLoading.update((state) => {
+      if (!busy) {
+        const { [key]: _removed, ...rest } = state;
+        return rest;
+      }
 
-    this.toast.success('Clase eliminada');
-    await Promise.all([this.cargarMisInscripciones(), this.cargarClases()]);
+      return { ...state, [key]: true };
+    });
   }
 
   inscripcionBadge(estado: string): string {
@@ -1679,7 +1875,7 @@ export class ClasesComponent implements OnInit {
   }
 
   chipTooltip(chip: WodChip): string {
-    return chip.tooltip?.trim() || chip.label;
+    return chip.label;
   }
 
   describeClase(clase: Pick<Clase, 'tipo' | 'wod_formato'>): string {
@@ -1693,15 +1889,32 @@ export class ClasesComponent implements OnInit {
     return [...warmup, ...accessories, ...main].slice(0, 3).join(' · ');
   }
 
+  isOptionalBlockActive(block: Exclude<WodBlockKey, 'main'>) {
+    return this.optionalBlocks()[block];
+  }
+
+  activateOptionalBlock(block: Exclude<WodBlockKey, 'main'>) {
+    this.optionalBlocks.update((state) => ({ ...state, [block]: true }));
+  }
+
+  deactivateOptionalBlock(block: Exclude<WodBlockKey, 'main'>) {
+    this.optionalBlocks.update((state) => ({ ...state, [block]: false }));
+
+    if (block === 'warmup') {
+      this.newClase.wod_plan.warmup = [];
+    } else {
+      this.newClase.wod_plan.accessories = [];
+    }
+
+    this.chipDrafts[block] = { label: '' };
+  }
+
   addChip(block: WodBlockKey) {
     const draft = this.chipDrafts[block];
     const label = draft.label.trim();
     if (!label) return;
 
-    const item: WodChip = {
-      label,
-      tooltip: draft.tooltip.trim() || null,
-    };
+    const item: WodChip = { label };
 
     if (block === 'main') {
       this.newClase.wod_plan.main.items = [...this.newClase.wod_plan.main.items, item];
@@ -1718,7 +1931,7 @@ export class ClasesComponent implements OnInit {
       }
     }
 
-    this.chipDrafts[block] = { label: '', tooltip: '' };
+    this.chipDrafts[block] = { label: '' };
   }
 
   removeChip(block: WodBlockKey, index: number) {
@@ -1750,6 +1963,7 @@ export class ClasesComponent implements OnInit {
 
     return {
       ...clase,
+      cancelada: clase.cancelada ?? false,
       tipo: 'WOD',
       wod_formato: mainFormat,
       descripcion: clase.descripcion ?? '',
@@ -1769,7 +1983,6 @@ export class ClasesComponent implements OnInit {
     return (list ?? [])
       .map((chip) => ({
         label: chip?.label?.trim() ?? '',
-        tooltip: chip?.tooltip?.trim() || null,
       }))
       .filter((chip) => chip.label.length > 0);
   }
@@ -1801,10 +2014,17 @@ export class ClasesComponent implements OnInit {
 
   private resetChipDrafts() {
     this.chipDrafts = {
-      warmup: { label: '', tooltip: '' },
-      accessories: { label: '', tooltip: '' },
-      main: { label: '', tooltip: '' },
+      warmup: { label: '' },
+      accessories: { label: '' },
+      main: { label: '' },
     };
+  }
+
+  private resetOptionalBlocks() {
+    this.optionalBlocks.set({
+      warmup: this.newClase.wod_plan.warmup.length > 0,
+      accessories: this.newClase.wod_plan.accessories.length > 0,
+    });
   }
 
   private roundToNextHalfHour(date: Date): Date {
@@ -1827,6 +2047,8 @@ export class ClasesComponent implements OnInit {
   }
 
   private formatTime(date: Date): string {
-    return formatEcuadorDate(date, 'HH:mm');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 }

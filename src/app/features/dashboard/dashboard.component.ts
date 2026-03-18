@@ -1,14 +1,23 @@
 import { Component, OnInit, OnDestroy, inject, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { AdminOpsService } from '../../core/services/admin-ops.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { WhatsappStatusWidgetComponent } from './whatsapp-status-widget/whatsapp-status-widget.component';
 
 Chart.register(...registerables);
 
-interface KPI { label: string; value: string | number; trend?: string; trendUp?: boolean; }
+interface KPI {
+  label: string;
+  value: string | number;
+  trend?: string;
+  trendUp?: boolean;
+  actionLabel?: string;
+  actionHint?: string;
+}
 interface Alerta { tipo: string; titulo: string; msg: string; }
 type ServiceStatus = 'online' | 'offline' | 'checking' | 'warning';
 
@@ -28,7 +37,7 @@ const BRAND_CHART = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, WhatsappStatusWidgetComponent],
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">{{ auth.canViewTechnicalDashboard() ? 'Sistema' : 'Operación' }}</span>
@@ -45,7 +54,14 @@ const BRAND_CHART = {
         <div class="stat-card">
           <div class="stat-card__label">{{ kpi.label }}</div>
           <div class="dashboard-kpi-value stat-card__value">{{ kpi.value }}</div>
-          @if (kpi.trend) {
+          @if (kpi.actionLabel) {
+            <button class="btn btn--secondary btn--sm dashboard-kpi-action" type="button" (click)="handleKpiAction(kpi)">
+              {{ kpi.actionLabel }}
+            </button>
+            @if (kpi.actionHint) {
+              <div class="stat-card__trend">{{ kpi.actionHint }}</div>
+            }
+          } @else if (kpi.trend) {
             <div class="stat-card__trend" [class.up]="kpi.trendUp" [class.down]="!kpi.trendUp">
               {{ kpi.trend }}
             </div>
@@ -75,11 +91,14 @@ const BRAND_CHART = {
     </div>
 
     <div class="bottom-grid dashboard-grid" [class.dashboard-grid--single]="!auth.canViewTechnicalDashboard()">
+      <div class="data-table-wrapper whatsapp-widget-column">
+        <app-whatsapp-status-widget></app-whatsapp-status-widget>
+      </div>
       @if (auth.canViewTechnicalDashboard()) {
         <div class="data-table-wrapper">
           <div class="data-table-wrapper__header">
             <span class="data-table-wrapper__title">Estado de Servicios</span>
-            <button class="btn btn--ghost btn--sm" (click)="refreshStatus()">↻</button>
+            <button class="btn btn--ghost btn--sm" (click)="refreshStatus()" [disabled]="refreshingStatus()">↻</button>
           </div>
           <div class="dashboard-status-body">
             <div class="service-card">
@@ -89,21 +108,6 @@ const BRAND_CHART = {
               </div>
               <div class="status-indicator" [class]="'status-indicator--' + n8nStatus()">
                 <div class="dot"></div>{{ statusLabel(n8nStatus()) }}
-              </div>
-            </div>
-
-            <div class="service-card">
-              <div>
-                <div class="service-card__name">WhatsApp · jauriaCrossfit</div>
-                <div class="service-card__detail">Evolution API</div>
-              </div>
-              <div class="dashboard-service-actions">
-                <div class="status-indicator" [class]="'status-indicator--' + waStatus()">
-                  <div class="dot"></div>{{ statusLabel(waStatus()) }}
-                </div>
-                @if (waStatus() !== 'online') {
-                  <button class="btn btn--ghost btn--sm" (click)="reconectarWA()">Reconectar</button>
-                }
               </div>
             </div>
 
@@ -149,6 +153,10 @@ const BRAND_CHART = {
       margin-top: 8px;
     }
 
+    .dashboard-kpi-action {
+      margin-top: 12px;
+    }
+
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -190,6 +198,10 @@ const BRAND_CHART = {
       gap: 12px;
     }
 
+    .whatsapp-widget-column {
+      min-height: 100%;
+    }
+
     .dashboard-alerts-body {
       padding: 16px;
     }
@@ -222,13 +234,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private supabase = inject(SupabaseService);
   private adminOps = inject(AdminOpsService);
   private toast    = inject(ToastService);
+  private router   = inject(Router);
   protected auth   = inject(AuthService);
 
   kpis      = signal<KPI[]>([]);
   alertas   = signal<Alerta[]>([]);
   n8nStatus = signal<ServiceStatus>('checking');
-  waStatus  = signal<ServiceStatus>('offline');
   wfCount   = signal(0);
+  refreshingStatus = signal(false);
 
   private barChartInstance?: Chart;
   private donutChartInstance?: Chart;
@@ -261,13 +274,29 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     const total = cd.length;
     const tasaPago = total ? Math.round(activos / total * 100) : 0;
     const totalCobrado = pd.reduce((s, p) => s + Number(p['monto'] ?? 0), 0);
-    const pagosPendientes = pd.filter((p) => String(p['estado'] ?? '').toLowerCase() !== 'completado').length;
+    const pendingPayments = pd.filter((p) => this.paymentStatusBadge(String(p['estado'] ?? '')) !== 'completado');
+    const pagosPendientes = pendingPayments.length;
+    const nextPendingPayment = pendingPayments[0] ?? null;
+    const nestedClientName = nextPendingPayment?.['clientes'] && typeof nextPendingPayment['clientes'] === 'object'
+      ? String((nextPendingPayment['clientes'] as Record<string, unknown>)['nombre_completo'] ?? '')
+      : '';
+    const pendingClientName = String(nextPendingPayment?.['nombre_cliente'] ?? nestedClientName).trim();
+    const pendingClientId = String(nextPendingPayment?.['id_cliente'] ?? '').trim();
 
     const kpis: KPI[] = [
       { label: 'Clientes Activos', value: activos, trend: `${total} total`, trendUp: true },
       { label: 'Total Cobrado', value: `$${totalCobrado.toFixed(0)}`, trend: `${pd.length} pagos`, trendUp: true },
       { label: 'Tasa de Pago', value: `${tasaPago}%`, trend: tasaPago >= 70 ? 'Saludable' : 'Revisar', trendUp: tasaPago >= 70 },
-      { label: 'Pagos Pendientes', value: pagosPendientes, trend: pagosPendientes === 0 ? 'Al día' : 'Revisar cobros', trendUp: pagosPendientes === 0 },
+      {
+        label: 'Pagos Pendientes',
+        value: pagosPendientes,
+        trend: pagosPendientes === 0 ? 'Al día' : undefined,
+        trendUp: pagosPendientes === 0,
+        actionLabel: pagosPendientes > 0 ? 'Revisar cobro' : undefined,
+        actionHint: pagosPendientes > 0
+          ? `${pendingClientName || 'Cliente pendiente'}${pendingClientId ? ` · ${pendingClientId}` : ''}`
+          : undefined,
+      },
       { label: 'Clientes Vencidos', value: vencidos, trend: vencidos === 0 ? 'Sin alertas' : 'Seguimiento requerido', trendUp: vencidos === 0 },
     ];
 
@@ -390,16 +419,15 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   refreshStatus() {
-    if (!this.auth.canViewTechnicalDashboard()) return;
+    if (!this.auth.canViewTechnicalDashboard() || this.refreshingStatus()) return;
 
+    this.refreshingStatus.set(true);
     this.n8nStatus.set('checking');
-    this.waStatus.set('checking');
 
     this.adminOps.getOpsStatus().subscribe({
       next: (status) => {
         this.wfCount.set(Number(status.n8n.activeWorkflows ?? 0));
         this.n8nStatus.set(status.n8n.status);
-        this.waStatus.set(status.evolution.status);
         this.alertas.update((current) => {
           const filtered = current.filter((alert) =>
             ![
@@ -413,24 +441,32 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
           return [...filtered, ...status.alerts];
         });
+        this.refreshingStatus.set(false);
       },
       error: () => {
         this.n8nStatus.set('warning');
-        this.waStatus.set('warning');
+        this.refreshingStatus.set(false);
       },
-    });
-  }
-
-  reconectarWA() {
-    if (!this.auth.canManageInfrastructure()) return;
-
-    this.adminOps.connectWhatsApp().subscribe({
-      next: res => { if (res?.code) this.toast.info('Escanea el QR desde WhatsApp para reconectar.'); },
-      error: () => this.toast.error('No se pudo reconectar la instancia de WhatsApp'),
     });
   }
 
   statusLabel(s: ServiceStatus): string {
     return { online: 'En línea', offline: 'Offline', checking: 'Verificando...', warning: 'Advertencia' }[s];
+  }
+
+  handleKpiAction(kpi: KPI) {
+    if (kpi.label !== 'Pagos Pendientes') return;
+    void this.router.navigate(['/app/pagos']);
+  }
+
+  private paymentStatusBadge(estado: string): 'completado' | 'pendiente' | 'otro' {
+    const normalized = (estado ?? '').trim().toLowerCase();
+    if (['completado', 'confirmado', 'approved', 'aprobado', 'success', 'exitoso'].includes(normalized)) {
+      return 'completado';
+    }
+    if (['pendiente', 'pending'].includes(normalized)) {
+      return 'pendiente';
+    }
+    return 'otro';
   }
 }

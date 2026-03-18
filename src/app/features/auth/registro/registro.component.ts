@@ -13,13 +13,12 @@ import { SupabaseService } from '../../../core/services/supabase.service';
     <div class="auth-page">
       <div class="auth-card">
         <div class="auth-card__header">
-          <h1 class="auth-card__title">JAURÍA</h1>
+          <img class="auth-card__logo" src="assets/logo.png" alt="Jauría CrossFit" />
           <p class="auth-card__subtitle">Activar cuenta de atleta</p>
         </div>
 
-        <!-- Instrucción al atleta -->
-        <div style="background:#1d2022;border-radius:8px;padding:14px;margin-bottom:20px;border-left:3px solid #A61F24;">
-          <p style="font-family:'Manrope',sans-serif;font-size:12px;color:#d2cbc1;line-height:1.6;margin:0;">
+        <div class="auth-card__notice">
+          <p style="margin:0;">
             Puedes crear tu cuenta solo si el coach ya registró tu membresía y
             tienes un <strong style="color:#f4f1eb;">plan activo</strong>.
             Usa el mismo email que diste al coach.
@@ -29,16 +28,36 @@ import { SupabaseService } from '../../../core/services/supabase.service';
         @if (!cuentaCreada()) {
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <div class="form-group">
-              <label class="form-label">Nombre Completo</label>
-              <input type="text" class="form-control" placeholder="Tu nombre" [(ngModel)]="nombre" name="nombre" required />
+              <label class="form-label" for="nombre">Nombre Completo</label>
+              <input id="nombre" type="text" class="form-control" placeholder="Tu nombre" [(ngModel)]="nombre" name="nombre" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Email (el mismo que diste al coach)</label>
-              <input type="email" class="form-control" placeholder="tu@email.com" [(ngModel)]="email" name="email" required />
+              <label class="form-label" for="email">Email (el mismo que diste al coach)</label>
+              <input id="email" type="email" class="form-control" placeholder="tu@email.com" [(ngModel)]="email" name="email" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Contraseña</label>
-              <input type="password" class="form-control" placeholder="Mínimo 8 caracteres" [(ngModel)]="password" name="password" required minlength="8" />
+              <label class="form-label" for="password">Contraseña</label>
+              <div class="auth-form__password-wrap">
+                <input
+                  id="password"
+                  [type]="mostrarPassword() ? 'text' : 'password'"
+                  class="form-control auth-form__password-input"
+                  placeholder="Mínimo 8 caracteres"
+                  [(ngModel)]="password"
+                  name="password"
+                  required
+                  minlength="8"
+                />
+                <button
+                  type="button"
+                  class="auth-form__password-toggle"
+                  (click)="togglePasswordVisibility()"
+                  [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="mostrarPassword()"
+                >
+                  <i-lucide [name]="mostrarPassword() ? 'eye-off' : 'eye'" />
+                </button>
+              </div>
             </div>
 
             @if (error()) {
@@ -54,7 +73,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
             <div class="auth-state-icon auth-state-icon--success"><i-lucide name="circle-check" /></div>
             <strong>¡Cuenta creada!</strong>
             <p style="margin-top:8px;font-size:13px;color:#d2cbc1;">
-              Ahora puedes iniciar sesión y ver tus clases y membresía.
+              Revisa tu correo para confirmar la cuenta si Supabase te lo pidió. Luego inicia sesión con el mismo email de tu membresía.
             </p>
           </div>
           <button class="btn btn--primary auth-form__submit" style="margin-top:16px;" (click)="irALogin()">
@@ -62,10 +81,12 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           </button>
         }
 
-        <p class="auth-card__footer">
-          ¿Ya tienes cuenta? <a routerLink="/auth/login">Ingresar</a><br>
-          ¿Eres coach o admin? <a routerLink="/auth/login">Volver al acceso del panel</a>
-        </p>
+        <div class="auth-card__footer auth-card__footer--stack">
+          <span>¿Ya tienes cuenta?</span>
+          <a routerLink="/auth/login">Ingresar</a>
+          <span>¿Eres coach o admin?</span>
+          <a routerLink="/auth/login">Volver al acceso del panel</a>
+        </div>
       </div>
     </div>
   `,
@@ -75,24 +96,131 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #0e0f10;
+      background:
+        radial-gradient(circle at top, rgba(166, 31, 36, 0.2), transparent 38%),
+        linear-gradient(160deg, #0b0c0d 0%, #111315 48%, #171a1c 100%);
       padding: 24px;
     }
+
     .auth-card {
-      background: #151718;
-      border: 1px solid #2b3033;
-      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(21, 23, 24, 0.96), rgba(17, 19, 20, 0.98));
+      border: 1px solid rgba(244, 241, 235, 0.08);
+      border-radius: 24px;
       padding: 40px;
       width: 100%;
-      max-width: 420px;
-      &__header { text-align: center; margin-bottom: 20px; }
-      &__title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 0.1em; color: #A61F24; margin: 0; }
-      &__subtitle { font-family: 'Manrope', sans-serif; font-size: 13px; color: #938C84; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 4px; }
-      &__footer { text-align: center; font-family: 'Manrope', sans-serif; font-size: 13px; color: #938C84; margin-top: 20px;
-        a { color: #A61F24; font-weight: 700; &:hover { text-decoration: underline; } }
+      max-width: 430px;
+      box-shadow: 0 28px 64px rgba(0, 0, 0, 0.42);
+
+      &__header {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+
+      &__logo {
+        width: 148px;
+        height: auto;
+        display: block;
+        margin: 0 auto 18px;
+      }
+
+      &__subtitle {
+        font-family: 'Manrope', sans-serif;
+        font-size: 12px;
+        color: #938c84;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        margin: 0;
+      }
+
+      &__footer {
+        text-align: center;
+        font-family: 'Manrope', sans-serif;
+        font-size: 13px;
+        color: #938c84;
+        margin-top: 20px;
+
+        a {
+          color: #a61f24;
+          font-weight: 600;
+          &:hover { text-decoration: underline; }
+        }
+      }
+
+      &__notice {
+        margin-bottom: 20px;
+        padding: 14px 16px;
+        border-left: 3px solid #a61f24;
+        background: rgba(29, 32, 34, 0.92);
+        border-radius: 12px;
+        font-family: 'Manrope', sans-serif;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #d2cbc1;
       }
     }
-    .auth-form__submit { width: 100%; margin-top: 8px; padding: 12px; font-size: 14px; }
+
+    .auth-form__password-wrap {
+      position: relative;
+    }
+
+    .auth-form__password-input {
+      padding-right: 52px;
+    }
+
+    .auth-form__password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: #938c84;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+
+    .auth-form__password-toggle:hover {
+      color: #f4f1eb;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .auth-form__password-toggle:focus-visible {
+      outline: 2px solid rgba(166, 31, 36, 0.4);
+      outline-offset: 1px;
+    }
+
+    .auth-form__submit {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    .auth-card__footer--stack {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .auth-page {
+        padding: 16px;
+      }
+
+      .auth-card {
+        padding: 28px 20px;
+
+        &__logo {
+          width: 126px;
+        }
+      }
+    }
   `],
 })
 export class RegistroComponent {
@@ -102,6 +230,7 @@ export class RegistroComponent {
   loading    = signal(false);
   error      = signal('');
   cuentaCreada = signal(false);
+  mostrarPassword = signal(false);
 
   private auth     = inject(AuthService);
   private supabase = inject(SupabaseService);
@@ -109,103 +238,60 @@ export class RegistroComponent {
 
   async onSubmit() {
     if (!this.nombre || !this.email || !this.password) return;
+    if (this.loading()) return;
     this.loading.set(true);
     this.error.set('');
     const normalizedEmail = this.email.trim().toLowerCase();
-    const normalizedNombre = this.nombre.trim();
 
-    // ── Paso 1: verificar que el email existe en clientes con estado='Activo' ──
-    const { data: clientes, error: clienteErr } = await this.supabase.client
-      .from('clientes')
-      .select('id_cliente, nombre_completo, estado')
-      .eq('email', normalizedEmail)
-      .eq('estado', 'Activo')
-      .limit(1);
+    try {
+      const { data: rows, error: clienteErr } = await this.supabase.client
+        .rpc('verificar_membresia_por_email', { p_email: normalizedEmail });
 
-    if (clienteErr) {
-      this.error.set('Error al verificar membresía. Intenta de nuevo.');
-      this.loading.set(false);
-      return;
-    }
+      if (clienteErr) {
+        this.error.set('Error al verificar membresía. Intenta de nuevo.');
+        return;
+      }
 
-    if (!clientes || clientes.length === 0) {
-      // Puede que exista pero con estado distinto — verificar para dar mensaje preciso
-      const { data: existe } = await this.supabase.client
-        .from('clientes')
-        .select('estado')
-        .eq('email', normalizedEmail)
-        .limit(1);
+      const membresia = rows as { id_cliente: string; nombre_completo: string; estado: string }[] | null;
 
-      if (existe && existe.length > 0) {
-        const estado = (existe[0] as { estado: string }).estado;
-        this.error.set(
-          `Tu membresía está en estado "${estado}". Solo puedes crear cuenta cuando esté Activa. Contacta al coach.`
-        );
-      } else {
+      if (!membresia || membresia.length === 0) {
         this.error.set(
           'No encontramos una membresía con ese email. El coach debe registrarte primero antes de crear tu cuenta.'
         );
+        return;
       }
-      this.loading.set(false);
-      return;
-    }
 
-    const cliente = clientes[0] as { id_cliente: string; nombre_completo: string; estado: string };
+      if (membresia[0].estado !== 'Activo') {
+        this.error.set(
+          `Tu membresía está en estado "${membresia[0].estado}". Solo puedes crear cuenta cuando esté Activa. Contacta al coach.`
+        );
+        return;
+      }
 
-    // ── Paso 2: crear cuenta en Supabase Auth ──────────────────────────────────
-    const { error: authErr } = await this.auth.registro(
-      normalizedEmail,
-      this.password,
-      normalizedNombre || cliente.nombre_completo
-    );
-
-    if (authErr) {
-      this.error.set(authErr);
-      this.loading.set(false);
-      return;
-    }
-
-    // ── Paso 3: login automático para obtener el ID del nuevo usuario ──────────
-    const { error: loginErr } = await this.auth.login(normalizedEmail, this.password);
-
-    if (loginErr) {
-      this.error.set(
-        'La cuenta se creó, pero no se pudo completar la vinculación con tu membresía. Contacta al coach antes de iniciar sesión.'
+      const cliente = membresia[0];
+      const { error: authErr } = await this.auth.registro(
+        normalizedEmail,
+        this.password,
+        cliente.nombre_completo
       );
+
+      if (authErr) {
+        this.error.set(authErr);
+        return;
+      }
+
+      await this.supabase.client.auth.signOut();
+      this.cuentaCreada.set(true);
+    } catch {
+      this.error.set('No se pudo completar el registro. Intenta nuevamente.');
+    } finally {
       this.loading.set(false);
-      return;
     }
-
-    // Vincular id_cliente al profile recién creado
-    const userId = this.auth.currentUser()?.id;
-    if (!userId) {
-      this.error.set(
-        'La cuenta se creó, pero no se pudo identificar tu usuario para vincular la membresía. Contacta al coach.'
-      );
-      this.loading.set(false);
-      return;
-    }
-
-    const { error: profileErr } = await this.supabase.updateProfile(userId, {
-      id_cliente: cliente.id_cliente,
-      rol: 'atleta',
-      nombre_completo: normalizedNombre || cliente.nombre_completo,
-    });
-
-    if (profileErr) {
-      this.error.set(
-        'La cuenta se creó, pero no se pudo vincular tu membresía. Contacta al coach antes de iniciar sesión.'
-      );
-      this.loading.set(false);
-      return;
-    }
-
-    // Cerramos la sesión sin redirigir para poder mostrar el estado de éxito local.
-    await this.supabase.client.auth.signOut();
-
-    this.loading.set(false);
-    this.cuentaCreada.set(true);
   }
 
   irALogin() { this.router.navigate(['/auth/login']); }
+
+  togglePasswordVisibility() {
+    this.mostrarPassword.update((visible) => !visible);
+  }
 }

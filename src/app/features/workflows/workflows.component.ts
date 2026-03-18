@@ -45,8 +45,8 @@ export class ActiveCountPipe implements PipeTransform {
                   (click)="toggleWorkflow(wf)" [disabled]="toggling() === wf.id">
                   {{ toggling() === wf.id ? '...' : (wf.active ? 'Desactivar' : 'Activar') }}
                 </button>
-                <button class="btn btn--ghost btn--sm" (click)="loadExecutions(wf.id)">
-                  {{ expandedWf() === wf.id ? '▲ Ocultar' : '▼ Ejecuciones' }}
+                <button class="btn btn--ghost btn--sm" (click)="loadExecutions(wf.id)" [disabled]="execLoadingWorkflowId() === wf.id">
+                  {{ execLoadingWorkflowId() === wf.id ? 'Cargando...' : (expandedWf() === wf.id ? '▲ Ocultar' : '▼ Ejecuciones') }}
                 </button>
               </div>
             </div>
@@ -93,6 +93,7 @@ export class WorkflowsComponent implements OnInit {
   executions  = signal<Execution[]>([]);
   loading     = signal(true);
   execLoading = signal(false);
+  execLoadingWorkflowId = signal<string | null>(null);
   toggling    = signal<string | null>(null);
   expandedWf  = signal<string | null>(null);
 
@@ -120,10 +121,19 @@ export class WorkflowsComponent implements OnInit {
     if (this.expandedWf() === wfId) { this.expandedWf.set(null); return; }
     this.expandedWf.set(wfId);
     this.execLoading.set(true);
+    this.execLoadingWorkflowId.set(wfId);
     this.executions.set([]);
     this.n8n.getExecutions(wfId, 10).subscribe({
-      next: res => { this.executions.set(res.data ?? []); this.execLoading.set(false); },
-      error: () => this.execLoading.set(false),
+      next: res => {
+        this.executions.set(res.data ?? []);
+        this.execLoading.set(false);
+        this.execLoadingWorkflowId.set(null);
+      },
+      error: () => {
+        this.toast.error('No se pudieron cargar las ejecuciones');
+        this.execLoading.set(false);
+        this.execLoadingWorkflowId.set(null);
+      },
     });
   }
 

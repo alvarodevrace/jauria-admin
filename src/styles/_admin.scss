@@ -533,6 +533,36 @@ $topbar-height: 64px;
 // BUTTONS
 // =============================================
 
+i-lucide,
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 0;
+  flex-shrink: 0;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.icon-spin {
+  animation: iconSpin 0.85s linear infinite;
+}
+
+@keyframes iconSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

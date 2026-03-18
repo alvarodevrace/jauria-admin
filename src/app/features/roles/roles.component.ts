@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { AdminUsersService } from '../../core/services/admin-users.service';
-import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -17,6 +15,7 @@ interface Profile {
   rol: 'atleta' | 'coach' | 'admin';
   activo: boolean;
   created_at: string;
+  avatar_url?: string | null;
 }
 
 @Component({
@@ -26,18 +25,13 @@ interface Profile {
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Sistema</span>
-      <h2 class="page-header__title">{{ canManageRoles() ? 'Usuarios y Roles' : 'Usuarios Registrados' }}</h2>
-      <p class="page-header__subtitle">
-        {{ profiles().length }} personas registradas
-        @if (!canManageRoles()) {
-          · vista operativa para coach
-        }
-      </p>
+      <h2 class="page-header__title">{{ canManageRoles() ? 'Usuarios y roles' : 'Usuarios' }}</h2>
+      <p class="page-header__subtitle">{{ profiles().length }} cuentas registradas</p>
     </div>
 
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
-        <span class="data-table-wrapper__title">Usuarios del Sistema</span>
+        <span class="data-table-wrapper__title">Cuentas del panel</span>
         <div class="search-input">
           <input type="text" placeholder="Buscar..." [(ngModel)]="searchTerm" (input)="applyFilter()" />
         </div>
@@ -57,7 +51,6 @@ interface Profile {
               @if (canManageRoles()) {
                 <th>Cambiar Rol</th>
               }
-              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -65,10 +58,21 @@ interface Profile {
               <tr>
                 <td class="data-table__cell--primary" data-label="">
                   <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:32px;height:32px;background:#A61F24;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#f4f1eb;flex-shrink:0;">
-                      {{ p.nombre_completo[0] }}
+                    @if (avatarUrl(p.avatar_url)) {
+                      <img
+                        [src]="avatarUrl(p.avatar_url)!"
+                        [alt]="'Avatar de ' + p.nombre_completo"
+                        style="width:40px;height:40px;border-radius:14px;object-fit:cover;border:1px solid rgba(212,167,98,0.18);background:#f6f1eb;flex-shrink:0;"
+                      />
+                    } @else {
+                      <div style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f4e6cf 0%,#ead7b5 100%);font-family:'Bebas Neue',sans-serif;font-size:16px;color:#7a4b12;flex-shrink:0;">
+                        {{ profileInitials(p.nombre_completo) }}
+                      </div>
+                    }
+                    <div style="min-width:0;">
+                      <span style="display:block;font-weight:600;color:#f4f1eb;">{{ p.nombre_completo }}</span>
+                      <span style="display:block;font-size:11px;color:#938c84;">{{ p.rol }}</span>
                     </div>
-                    <span style="font-weight:600;color:#f4f1eb;">{{ p.nombre_completo }}</span>
                   </div>
                 </td>
                 <td data-label="Email" style="font-size:13px;color:#d2cbc1;">{{ p.email }}</td>
@@ -106,26 +110,9 @@ interface Profile {
                     }
                   </td>
                 }
-                <td class="data-table__cell--actions" data-label="Acciones">
-                  @if (canToggleProfile(p)) {
-                    <div class="data-table__actions mobile-actions" style="align-items:center;">
-                      <button
-                        class="btn btn--sm"
-                        [class.btn--danger]="p.activo"
-                        [class.btn--secondary]="!p.activo"
-                        (click)="toggleProfileStatus(p)"
-                        [disabled]="deleting() === p.id"
-                      >
-                        {{ deleting() === p.id ? 'Procesando...' : (p.activo ? 'Desactivar' : 'Reactivar') }}
-                      </button>
-                    </div>
-                  } @else {
-                    <span style="font-size:12px;color:#938c84;font-style:italic;">Sin acción</span>
-                  }
-                </td>
               </tr>
             } @empty {
-              <tr><td [attr.colspan]="canManageRoles() ? 7 : 6" style="text-align:center;padding:40px;color:#938c84;">Sin personas registradas.</td></tr>
+              <tr><td [attr.colspan]="canManageRoles() ? 6 : 5" style="text-align:center;padding:40px;color:#938c84;">Sin usuarios registrados.</td></tr>
             }
           </tbody>
         </table>
@@ -136,8 +123,6 @@ interface Profile {
 export class RolesComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private auth     = inject(AuthService);
-  private adminUsers = inject(AdminUsersService);
-  private confirmDialog = inject(ConfirmDialogService);
   private toast    = inject(ToastService);
   private sentry   = inject(SentryService);
 
@@ -145,7 +130,6 @@ export class RolesComponent implements OnInit {
   filtered   = signal<Profile[]>([]);
   loading    = signal(true);
   changing   = signal<string | null>(null);
-  deleting   = signal<string | null>(null);
   searchTerm = '';
 
   currentUserId = () => this.auth.currentUser()?.id ?? '';
@@ -211,55 +195,17 @@ export class RolesComponent implements OnInit {
     return ({ admin: 'activo', coach: 'pendiente', atleta: 'inactivo' } as Record<string, string>)[rol] ?? 'inactivo';
   }
 
-  canToggleProfile(profile: Profile) {
-    if (profile.id === this.currentUserId()) return false;
-    if (this.auth.isAdmin()) return profile.rol !== 'admin';
-    return this.auth.isCoach() && profile.rol === 'atleta';
+  avatarUrl(path?: string | null) {
+    if (!path) return null;
+    if (/^https?:\/\//.test(path)) return path;
+    return this.supabase.getProfileAvatarUrl(path);
   }
 
-  async toggleProfileStatus(profile: Profile) {
-    if (!this.canToggleProfile(profile)) return;
-
-    const nextActivo = !profile.activo;
-
-    const confirmed = await this.confirmDialog.open({
-      title: nextActivo ? 'Reactivar usuario' : 'Desactivar usuario',
-      message: nextActivo
-        ? `Se reactivará la cuenta de ${profile.nombre_completo} y podrá volver a ingresar al panel.`
-        : `Se desactivará la cuenta de ${profile.nombre_completo}. Perderá acceso al panel hasta que la reactives.`,
-      confirmLabel: nextActivo ? 'Reactivar usuario' : 'Desactivar usuario',
-      cancelLabel: 'Cancelar',
-      tone: nextActivo ? 'primary' : 'danger',
-    });
-
-    if (!confirmed) return;
-
-    this.deleting.set(profile.id);
-
-    this.adminUsers.updateUserStatus(profile.id, nextActivo).subscribe({
-      next: async () => {
-        this.profiles.update((list) => list.map((item) => item.id === profile.id ? { ...item, activo: nextActivo } : item));
-        this.filtered.update((list) => list.map((item) => item.id === profile.id ? { ...item, activo: nextActivo } : item));
-        this.toast.success(`Cuenta ${nextActivo ? 'reactivada' : 'desactivada'}: ${profile.nombre_completo}`);
-
-        const actorId = this.auth.currentUser()?.id;
-        if (actorId) {
-          await this.supabase.logAuditoria(actorId, nextActivo ? 'reactivar_usuario' : 'desactivar_usuario', {
-            target_user: profile.email,
-            target_role: profile.rol,
-            activo: nextActivo,
-          });
-        }
-      },
-      error: (error) => {
-        this.sentry.captureError(error, { action: 'toggleUserStatus', targetUserId: profile.id, activo: nextActivo });
-        const message = error?.error?.message ?? 'No se pudo actualizar el usuario';
-        this.toast.error(message);
-        this.deleting.set(null);
-      },
-      complete: () => {
-        this.deleting.set(null);
-      },
-    });
+  profileInitials(name?: string | null) {
+    return (name ?? 'Atleta')
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'AT';
   }
 }

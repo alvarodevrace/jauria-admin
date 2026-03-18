@@ -23,6 +23,8 @@ interface Cliente {
   metodo_pago: string;
   fecha_inicio: string;
   fecha_vencimiento: string;
+  fecha_nacimiento?: string | null;
+  consentimiento_whatsapp?: boolean;
   ultimo_pago_fecha: string;
   link_pago_actual: string;
 }
@@ -46,14 +48,14 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
   template: `
     <div class="page-header">
       <span class="page-header__eyebrow">Gestión</span>
-      <h2 class="page-header__title">Clientes</h2>
-      <p class="page-header__subtitle">{{ clientes().length }} clientes registrados</p>
+      <h2 class="page-header__title">Atletas</h2>
+      <p class="page-header__subtitle">{{ clientes().length }} atletas registrados</p>
     </div>
 
     <!-- Toolbar -->
     <div class="data-table-wrapper">
       <div class="data-table-wrapper__header">
-        <span class="data-table-wrapper__title">Todos los Clientes</span>
+        <span class="data-table-wrapper__title">Todos los atletas</span>
         <div class="toolbar-row">
           <div class="toolbar-group">
             <button class="btn btn--sm" [class.btn--primary]="view() === 'operativos'" [class.btn--ghost]="view() !== 'operativos'" (click)="setView('operativos')">Operativos</button>
@@ -76,17 +78,17 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
             <option value="TRIMESTRAL">Trimestral</option>
             <option value="ANUAL">Anual</option>
           </select>
-          <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">+ Nuevo Cliente</button>
+          <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">+ Nuevo atleta</button>
         </div>
       </div>
 
       @if (loading()) {
-        <div style="padding:40px;text-align:center;color:#938C84;">Cargando clientes...</div>
+        <div style="padding:40px;text-align:center;color:#938C84;">Cargando atletas...</div>
       } @else {
         <table class="data-table data-table--stacked-mobile">
           <thead>
             <tr>
-              <th>Cliente</th>
+              <th>Atleta</th>
               <th>Plan</th>
               <th>Estado</th>
               <th>Método</th>
@@ -121,16 +123,20 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
                 <td data-label="Último pago" style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
                 <td class="data-table__cell--actions" data-label="Acciones">
                   <div class="data-table__actions mobile-actions" style="justify-content:flex-end;flex-wrap:wrap;">
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar cliente" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar atleta" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
                     <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-lucide name="clipboard" /></button>
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Enviar recordatorio WhatsApp" aria-label="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)" [disabled]="loadingAccion() === c.id_cliente + '_rec'">
-                      @if (loadingAccion() === c.id_cliente + '_rec') { ... } @else { <i-lucide name="send" /> }
+                    <button class="btn btn--ghost btn--sm btn--icon" title="Enviar recordatorio WhatsApp" aria-label="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)">
+                      @if (isReminderBusy(c.id_cliente)) {
+                        <i-lucide class="icon-spin" name="settings-2" />
+                      } @else {
+                        <i-lucide name="send" />
+                      }
                     </button>
                     <button
                       class="btn btn--sm"
                       [class.btn--danger]="c.estado !== 'Inactivo'"
                       [class.btn--secondary]="c.estado === 'Inactivo'"
-                      [title]="c.estado === 'Inactivo' ? 'Reactivar cliente' : 'Dar de baja cliente'"
+                      [title]="c.estado === 'Inactivo' ? 'Reactivar atleta' : 'Dar de baja atleta'"
                       (click)="toggleEstadoCliente(c)"
                       [disabled]="loadingAccion() === c.id_cliente + '_status'"
                     >
@@ -142,7 +148,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
             } @empty {
               <tr>
                 <td colspan="7" style="text-align:center;padding:60px;color:#938C84;">
-                  No hay clientes. <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">Crear primer cliente</button>
+                  No hay atletas. <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">Crear primer atleta</button>
                 </td>
               </tr>
             }
@@ -156,14 +162,14 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       <div class="modal-backdrop" (click)="cerrarModal()">
         <div class="modal modal--wide" (click)="$event.stopPropagation()">
           <div class="modal__header">
-            <h3 class="modal__title">{{ modalMode() === 'crear' ? 'Nuevo Cliente' : 'Editar Cliente' }}</h3>
+            <h3 class="modal__title">{{ modalMode() === 'crear' ? 'Nuevo atleta' : 'Editar atleta' }}</h3>
             <button class="btn btn--ghost btn--icon" (click)="cerrarModal()"><i-lucide name="circle-x" /></button>
           </div>
           <div class="modal__body">
             <form (ngSubmit)="guardarCliente()">
               <div class="two-column-grid">
 
-                <div class="form-group" style="grid-column:1/-1;">
+                <div class="form-group">
                   <label class="form-label">Nombre Completo *</label>
                   <input class="form-control" type="text" [(ngModel)]="form.nombre_completo" name="nombre" required placeholder="Ej: JUAN CARLOS PÉREZ" />
                 </div>
@@ -176,6 +182,18 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
                 <div class="form-group">
                   <label class="form-label">Teléfono WhatsApp *</label>
                   <input class="form-control" type="text" [(ngModel)]="form.telefono_whatsapp" name="tel" required placeholder="0987654321" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Fecha de nacimiento</label>
+                  <input class="form-control" type="date" [(ngModel)]="form.fecha_nacimiento" name="fnac" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-checkbox">
+                    <input type="checkbox" [(ngModel)]="form.consentimiento_whatsapp" name="consentimiento" />
+                    <span>Autorizo recibir novedades y recordatorios por WhatsApp.</span>
+                  </label>
                 </div>
 
                 <div class="form-group">
@@ -223,16 +241,18 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
                   <input class="form-control" type="date" [(ngModel)]="form.fecha_inicio" name="finicio" required (change)="calcFechaVencimiento()" />
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">Fecha Vencimiento</label>
-                  <input class="form-control" type="date" [(ngModel)]="form.fecha_vencimiento" name="fvenc" />
-                </div>
+                @if (modalMode() === 'editar') {
+                  <div class="form-group">
+                    <label class="form-label">Fecha Vencimiento</label>
+                    <input class="form-control" type="date" [(ngModel)]="form.fecha_vencimiento" name="fvenc" />
+                  </div>
+                }
 
               </div>
 
               @if (modalMode() === 'crear') {
                 <div class="alert alert--info" style="margin-top:8px;">
-                  El ID de cliente se generará automáticamente (formato C001, C002...) y el estado inicial será Pendiente.
+                  El ID del atleta se generará automáticamente (formato C001, C002...) y el estado inicial será Pendiente.
                 </div>
               }
 
@@ -243,7 +263,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
               <div class="modal__footer" style="padding:0;margin-top:24px;">
                 <button type="button" class="btn btn--ghost" (click)="cerrarModal()">Cancelar</button>
                 <button type="submit" class="btn btn--primary" [disabled]="guardando()">
-                  {{ guardando() ? 'Guardando...' : (modalMode() === 'crear' ? 'Crear Cliente' : 'Guardar Cambios') }}
+                  {{ guardando() ? 'Guardando...' : (modalMode() === 'crear' ? 'Crear atleta' : 'Guardar cambios') }}
                 </button>
               </div>
             </form>
@@ -300,6 +320,7 @@ export class ClientesComponent implements OnInit {
   filtered = signal<Cliente[]>([]);
   loading = signal(true);
   loadingAccion = signal('');
+  reminderQueueState = signal<Record<string, number>>({});
   view = signal<ClientesView>('operativos');
   searchTerm = '';
   filterEstado = '';
@@ -316,6 +337,7 @@ export class ClientesComponent implements OnInit {
   historialClienteId = signal('');
   historial = signal<Pago[]>([]);
   historialLoading = signal(false);
+  private reminderQueue = new Map<string, Promise<void>>();
 
   async ngOnInit() {
     await this.cargarClientes();
@@ -335,7 +357,7 @@ export class ClientesComponent implements OnInit {
       this.applyFilter();
     } catch (error) {
       this.sentry.captureError(error, { action: 'cargarClientes' });
-      this.toast.error('No se pudieron cargar los clientes');
+      this.toast.error('No se pudieron cargar los atletas');
     } finally {
       this.loading.set(false);
     }
@@ -393,7 +415,12 @@ export class ClientesComponent implements OnInit {
     this.modalError.set('');
     if (mode === 'editar' && cliente) {
       this.editingId = cliente.id_cliente;
-      this.form = { ...cliente, telefono_whatsapp: this.toLocalPhone(cliente.telefono_whatsapp) };
+      this.form = {
+        ...cliente,
+        telefono_whatsapp: this.toLocalPhone(cliente.telefono_whatsapp),
+        fecha_nacimiento: cliente.fecha_nacimiento ?? '',
+        consentimiento_whatsapp: cliente.consentimiento_whatsapp ?? false,
+      };
     } else {
       this.editingId = '';
       this.form = this.emptyForm();
@@ -417,6 +444,7 @@ export class ClientesComponent implements OnInit {
   }
 
   calcFechaVencimiento() {
+    if (this.modalMode() === 'crear') return;
     if (!this.form.fecha_inicio || !this.form.plan) return;
     const dias: Record<string, number> = { MENSUAL: 30, TRIMESTRAL: 90, ANUAL: 365 };
     this.form.fecha_vencimiento = addDaysToEcuadorDate(this.form.fecha_inicio as string, dias[this.form.plan] ?? 30);
@@ -430,7 +458,7 @@ export class ClientesComponent implements OnInit {
 
     if (this.modalMode() === 'editar') {
       const confirmed = await this.confirmDialog.open({
-        title: 'Guardar cambios del cliente',
+        title: 'Guardar cambios del atleta',
         message: `Se actualizará la ficha de ${this.form.nombre_completo}.`,
         confirmLabel: 'Guardar cambios',
         cancelLabel: 'Cancelar',
@@ -448,11 +476,15 @@ export class ClientesComponent implements OnInit {
 
       if (this.modalMode() === 'crear') {
         const idCliente = await this.generarIdCliente();
+        const { fecha_vencimiento: _fv, ...formSinFechaVenc } = this.form;
         const payload = {
-          ...this.form,
+          ...formSinFechaVenc,
           id_cliente: idCliente,
           telefono_whatsapp: telefonoNormalizado,
           estado: 'Pendiente',
+          fecha_vencimiento: null,
+          fecha_nacimiento: this.form.fecha_nacimiento ? this.form.fecha_nacimiento : null,
+          consentimiento_whatsapp: Boolean(this.form.consentimiento_whatsapp),
         };
         const { error } = await this.supabase.createCliente(payload);
         if (error) {
@@ -460,7 +492,7 @@ export class ClientesComponent implements OnInit {
           return;
         }
 
-        this.toast.success(`Cliente ${idCliente} creado`);
+        this.toast.success(`Atleta ${idCliente} creado`);
       } else {
         const payload = {
           nombre_completo: this.form.nombre_completo,
@@ -472,6 +504,8 @@ export class ClientesComponent implements OnInit {
           estado: this.form.estado,
           fecha_inicio: this.form.fecha_inicio,
           fecha_vencimiento: this.form.fecha_vencimiento,
+          fecha_nacimiento: this.form.fecha_nacimiento ? this.form.fecha_nacimiento : null,
+          consentimiento_whatsapp: Boolean(this.form.consentimiento_whatsapp),
         };
 
         const { error } = await this.supabase.updateCliente(this.editingId, payload);
@@ -480,7 +514,7 @@ export class ClientesComponent implements OnInit {
           return;
         }
 
-        this.toast.success('Cliente actualizado');
+        this.toast.success('Atleta actualizado');
       }
 
       this.cerrarModal();
@@ -491,7 +525,7 @@ export class ClientesComponent implements OnInit {
         mode: this.modalMode() ?? 'unknown',
         idCliente: this.editingId || undefined,
       });
-      this.modalError.set('No se pudo guardar el cliente. Intenta nuevamente.');
+      this.modalError.set('No se pudo guardar el atleta. Intenta nuevamente.');
     } finally {
       this.guardando.set(false);
     }
@@ -506,17 +540,30 @@ export class ClientesComponent implements OnInit {
   // ── Acciones ───────────────────────────────────────────────────────────────
 
   async enviarRecordatorio(c: Cliente) {
-    this.loadingAccion.set(c.id_cliente + '_rec');
-    try {
-      await firstValueFrom(this.clientsService.sendReminder(c.id_cliente));
+    const queueKey = c.id_cliente;
+    this.bumpReminderQueue(queueKey, 1);
 
-      this.toast.success(`Flujo enviado para ${c.nombre_completo}`);
-    } catch (error) {
-      this.sentry.captureError(error, { action: 'sendClientReminder', idCliente: c.id_cliente });
-      this.toast.error('No se pudo ejecutar el flujo desde el backend');
-    } finally {
-      this.loadingAccion.set('');
-    }
+    const previous = this.reminderQueue.get(queueKey) ?? Promise.resolve();
+    const next = previous
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          await firstValueFrom(this.clientsService.sendReminder(c.id_cliente));
+          this.toast.success(`Flujo enviado para ${c.nombre_completo}`);
+        } catch (error) {
+          this.sentry.captureError(error, { action: 'sendClientReminder', idCliente: c.id_cliente });
+          this.toast.error('No se pudo ejecutar el flujo desde el backend');
+        } finally {
+          this.bumpReminderQueue(queueKey, -1);
+        }
+      });
+
+    this.reminderQueue.set(queueKey, next);
+    void next.finally(() => {
+      if (this.reminderQueue.get(queueKey) === next) {
+        this.reminderQueue.delete(queueKey);
+      }
+    });
   }
 
   async verHistorial(idCliente: string) {
@@ -550,11 +597,11 @@ export class ClientesComponent implements OnInit {
   async toggleEstadoCliente(cliente: Cliente) {
     const nextEstado = this.nextEstadoCliente(cliente);
     const confirmed = await this.confirmDialog.open({
-      title: nextEstado === 'Inactivo' ? 'Dar de baja cliente' : 'Reactivar cliente',
+      title: nextEstado === 'Inactivo' ? 'Dar de baja atleta' : 'Reactivar atleta',
       message: nextEstado === 'Inactivo'
         ? `Se marcará a ${cliente.nombre_completo} como Inactivo. Su historial se conserva y saldrá del flujo operativo normal.`
         : `Se reactivará a ${cliente.nombre_completo} y volverá a la operación diaria con estado ${nextEstado}.`,
-      confirmLabel: nextEstado === 'Inactivo' ? 'Dar de baja' : 'Reactivar',
+      confirmLabel: nextEstado === 'Inactivo' ? 'Dar de baja atleta' : 'Reactivar atleta',
       cancelLabel: 'Cancelar',
       tone: nextEstado === 'Inactivo' ? 'danger' : 'primary',
     });
@@ -567,11 +614,11 @@ export class ClientesComponent implements OnInit {
       const { error } = await this.supabase.setClienteEstado(cliente.id_cliente, nextEstado);
       if (error) {
         this.sentry.captureError(error, { action: 'setClienteEstado', idCliente: cliente.id_cliente, estado: nextEstado });
-        this.toast.error('No se pudo actualizar el estado del cliente');
+        this.toast.error('No se pudo actualizar el estado del atleta');
         return;
       }
 
-      this.toast.success(`Cliente ${nextEstado === 'Inactivo' ? 'marcado como Inactivo' : 'reactivado'}: ${cliente.nombre_completo}`);
+      this.toast.success(`Atleta ${nextEstado === 'Inactivo' ? 'marcado como Inactivo' : 'reactivado'}: ${cliente.nombre_completo}`);
       await this.cargarClientes();
     } finally {
       this.loadingAccion.set('');
@@ -613,6 +660,26 @@ export class ClientesComponent implements OnInit {
     return digits;
   }
 
+  reminderPendingCount(idCliente: string): number {
+    return this.reminderQueueState()[idCliente] ?? 0;
+  }
+
+  isReminderBusy(idCliente: string): boolean {
+    return this.reminderPendingCount(idCliente) > 0;
+  }
+
+  private bumpReminderQueue(idCliente: string, delta: number) {
+    this.reminderQueueState.update((state) => {
+      const nextCount = Math.max(0, (state[idCliente] ?? 0) + delta);
+      if (nextCount === 0) {
+        const { [idCliente]: _removed, ...rest } = state;
+        return rest;
+      }
+
+      return { ...state, [idCliente]: nextCount };
+    });
+  }
+
   private emptyForm(): Partial<Cliente> & Record<string, unknown> {
     return {
       nombre_completo: '',
@@ -624,6 +691,8 @@ export class ClientesComponent implements OnInit {
       estado: 'Pendiente',
       fecha_inicio: getEcuadorTodayYmd(),
       fecha_vencimiento: '',
+      fecha_nacimiento: '',
+      consentimiento_whatsapp: false,
     };
   }
 }

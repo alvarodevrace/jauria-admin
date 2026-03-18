@@ -82,10 +82,10 @@ interface Conversacion {
             </div>
 
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn btn--ghost btn--sm" (click)="escalar(conv.id)">
+              <button class="btn btn--ghost btn--sm" (click)="escalar(conv.id)" [disabled]="isBusy(conv.id)">
                 {{ conv.intentos_validacion >= 2 ? 'Escalar ahora' : 'Escalar a Coach' }}
               </button>
-              <button class="btn btn--danger btn--sm" (click)="cerrar(conv.id)">Cerrar conversación</button>
+              <button class="btn btn--danger btn--sm" (click)="cerrar(conv.id)" [disabled]="isBusy(conv.id)">Cerrar conversación</button>
             </div>
 
             <div style="font-size:11px;color:#938C84;">
@@ -108,6 +108,7 @@ export class ConversacionesComponent implements OnInit {
 
   conversaciones = signal<Conversacion[]>([]);
   loading = signal(true);
+  actionLoading = signal<Record<string, boolean>>({});
 
   conversacionesOrdenadas = computed(() => {
     return [...this.conversaciones()].sort((a, b) => this.urgencyScore(b) - this.urgencyScore(a));
@@ -196,14 +197,54 @@ export class ConversacionesComponent implements OnInit {
   }
 
   async escalar(id: number) {
-    await this.supabase.updateConversacion(id, { estado: 'escalado' });
-    this.toast.success('Conversación escalada');
-    this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    this.setBusy(id, true);
+    try {
+      const { error } = await this.supabase.updateConversacion(id, { estado: 'escalado' });
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.toast.success('Conversación escalada');
+      this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    } catch {
+      this.toast.error('No se pudo escalar la conversación');
+    } finally {
+      this.setBusy(id, false);
+    }
   }
 
   async cerrar(id: number) {
-    await this.supabase.updateConversacion(id, { estado: 'fallido' });
-    this.toast.info('Conversación cerrada');
-    this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    this.setBusy(id, true);
+    try {
+      const { error } = await this.supabase.updateConversacion(id, { estado: 'fallido' });
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.toast.info('Conversación cerrada');
+      this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    } catch {
+      this.toast.error('No se pudo cerrar la conversación');
+    } finally {
+      this.setBusy(id, false);
+    }
+  }
+
+  isBusy(id: number) {
+    return this.actionLoading()[String(id)] === true;
+  }
+
+  private setBusy(id: number, busy: boolean) {
+    const key = String(id);
+    this.actionLoading.update((state) => {
+      if (!busy) {
+        const { [key]: _removed, ...rest } = state;
+        return rest;
+      }
+
+      return { ...state, [key]: true };
+    });
   }
 }

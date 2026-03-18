@@ -10,6 +10,40 @@ import { SentryService } from '../../core/services/sentry.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
 
+interface AttendanceRewardConfig {
+  rewardName: string;
+  description: string;
+  targetPercentage: number;
+  participantUserIds?: string[];
+}
+
+interface RewardCatalogItem {
+  id: string;
+  title: string;
+  category: string;
+  reward: string;
+  description: string;
+  participantUserIds?: string[];
+}
+
+interface RewardCard {
+  id: string;
+  title: string;
+  reward: string;
+  description: string;
+  category: string;
+  type: 'attendance' | 'catalog';
+  participantUserIds?: string[];
+}
+
+interface Cumpleanero {
+  id_cliente: string;
+  nombre_completo: string;
+  fecha_nacimiento: string;
+  email: string;
+  telefono_whatsapp: string;
+}
+
 @Component({
   selector: 'app-novedades',
   standalone: true,
@@ -22,6 +56,40 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
         Noticias del box, eventos y anuncios del coach visibles para toda la comunidad.
       </p>
     </div>
+
+    <section class="cumpleanos-section">
+      <div class="cumpleanos-section__header">
+        <span class="novedades-section-label">Hoy celebramos</span>
+        <h3 class="novedades-section-title">Cumpleañeros</h3>
+      </div>
+
+      @if (cumpleanerosLoading()) {
+        <div class="cumpleanos-empty">Cargando cumpleañeros...</div>
+      } @else if (cumpleanerosError()) {
+        <div class="cumpleanos-empty">
+          No pudimos cargar la lista de cumpleañeros del día. Intenta refrescar en un momento.
+        </div>
+      } @else if (cumpleaneros().length > 0) {
+        <div class="cumpleanos-grid">
+          @for (cumple of cumpleaneros(); track cumple.id_cliente) {
+            <article class="cumpleanos-card">
+              <div class="cumpleanos-card__emoji" aria-label="Cumpleaños">🎉</div>
+              <div class="cumpleanos-card__meta">
+                <strong>{{ cumple.nombre_completo }}</strong>
+                <span>{{ cumple.fecha_nacimiento | dateEc: 'dd MMMM' }}</span>
+              </div>
+              <div class="cumpleanos-card__info">
+                <span>ID {{ cumple.id_cliente }}</span>
+                <span>{{ cumple.email }}</span>
+                <span>{{ cumple.telefono_whatsapp }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="cumpleanos-empty">Hoy no hay cumpleañeros. ¡Revisamos mañana!</div>
+      }
+    </section>
 
     @if (error()) {
       <div class="alert alert--warning">
@@ -38,116 +106,55 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
           <div class="skeleton skeleton--card novedades-skeleton"></div>
         }
       </div>
-    } @else if (destacados().length > 0) {
-      <section class="novedades-featured">
-        <div class="novedades-featured__header">
-          <div>
-            <span class="novedades-section-label">Destacado</span>
-            <h3 class="novedades-section-title">Lo último del box</h3>
-          </div>
-          @if (destacados().length > 1) {
-            <div class="novedades-featured__actions">
-              <button class="btn btn--ghost btn--sm btn--icon" (click)="prevFeatured()" aria-label="Anterior">
-                <i-lucide name="chevron-left" />
+    } @else {
+      @if (rewardCards().length > 0) {
+      <section class="data-table-wrapper novedades-premios">
+        <div class="data-table-wrapper__header">
+          <span class="data-table-wrapper__title">Retos</span>
+        </div>
+
+        <div class="novedades-premios__grid">
+          @for (reward of rewardCards(); track reward.id) {
+            <article class="novedades-reto-card" (click)="openRewardDetail(reward)">
+              <button class="novedades-reto-card__summary" type="button">
+                <div>
+                  <span class="novedades-section-label">{{ reward.category }}</span>
+                  <h3 class="novedades-reto-card__title">{{ reward.title }}</h3>
+                </div>
+                <span class="novedades-reto-card__toggle">Ver reto</span>
               </button>
-              <button class="btn btn--ghost btn--sm btn--icon" (click)="nextFeatured()" aria-label="Siguiente">
-                <i-lucide name="chevron-right" />
-              </button>
-            </div>
+            </article>
           }
         </div>
-
-        <div class="novedades-carousel">
-          <div
-            class="novedades-carousel__track"
-            [style.transform]="'translateX(-' + (featuredIndex() * 100) + '%)'"
-          >
-            @for (item of destacados(); track item.id) {
-              <article class="novedades-hero-card" (click)="openDetail(item)">
-                <div class="novedades-hero-card__image-wrap">
-                  <img
-                    class="novedades-hero-card__image"
-                    [src]="imageUrl(item)"
-                    [alt]="item.titulo"
-                  />
-                  <div class="novedades-hero-card__overlay"></div>
-                </div>
-                <div class="novedades-hero-card__body">
-                  <div class="novedades-hero-card__meta">
-                    <span class="novedades-type-pill" [class.novedades-type-pill--evento]="item.tipo === 'evento'">
-                      {{ item.tipo }}
-                    </span>
-                    <span>{{ item.published_at || item.created_at | dateEc: 'dd/MM/yyyy' }}</span>
-                  </div>
-                  <h3 class="novedades-hero-card__title">{{ item.titulo }}</h3>
-                  <p class="novedades-hero-card__desc">{{ excerpt(item.descripcion, 170) }}</p>
-
-                  @if (item.tipo === 'evento') {
-                    <div class="novedades-hero-card__event-meta">
-                      <span>
-                        <i-lucide name="calendar-days" />
-                        {{ item.evento_fecha_inicio | dateEc: 'EEEE dd/MM · HH:mm' }}
-                      </span>
-                      <span>
-                        <i-lucide name="map-pinned" />
-                        {{ modalidadLabel(item) }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              </article>
-            }
-          </div>
-        </div>
-
-        @if (destacados().length > 1) {
-          <div class="novedades-carousel__dots">
-            @for (item of destacados(); track item.id; let i = $index) {
-              <button
-                class="novedades-carousel__dot"
-                [class.active]="featuredIndex() === i"
-                (click)="featuredIndex.set(i)"
-                [attr.aria-label]="'Ir al destacado ' + (i + 1)"
-              ></button>
-            }
-          </div>
-        }
       </section>
-    }
+      }
 
-    <section class="novedades-feed">
+      @if (items().length > 0) {
+      <section class="novedades-feed">
       <div class="novedades-feed__toolbar">
         <div>
-          <span class="novedades-section-label">Feed</span>
-          <h3 class="novedades-section-title">Noticias y eventos</h3>
+          <span class="novedades-section-label">Actualizado</span>
+          <h3 class="novedades-section-title">Lo último del box</h3>
         </div>
-        <div class="novedades-filters">
-          @for (tipo of filtros; track tipo.value) {
-            <button
-              class="btn btn--sm"
-              [class]="selectedFilter() === tipo.value ? 'btn--primary' : 'btn--ghost'"
-              (click)="selectedFilter.set(tipo.value)"
-            >
-              {{ tipo.label }}
+        @if (items().length > 1) {
+          <div class="novedades-featured__actions">
+            <button class="btn btn--ghost btn--sm btn--icon" (click)="prevFeatured()" aria-label="Anterior">
+              <i-lucide name="chevron-left" />
             </button>
-          }
-        </div>
+            <button class="btn btn--ghost btn--sm btn--icon" (click)="nextFeatured()" aria-label="Siguiente">
+              <i-lucide name="chevron-right" />
+            </button>
+          </div>
+        }
       </div>
 
-      @if (filtrados().length === 0) {
-        <div class="data-table-wrapper">
-          <div class="novedades-empty">
-            <div class="auth-state-icon auth-state-icon--warning">
-              <i-lucide name="clipboard" />
-            </div>
-            <h4>No hay novedades para este filtro</h4>
-            <p>Cuando el coach publique contenido nuevo aparecerá aquí automáticamente.</p>
-          </div>
-        </div>
-      } @else {
-        <div class="novedades-grid">
-          @for (item of filtrados(); track item.id) {
-            <article class="novedades-card" (click)="openDetail(item)">
+      <div class="novedades-horizontal-wrap">
+        <div
+          class="novedades-horizontal-track"
+          [style.transform]="'translateX(-' + (featuredIndex() * slideOffset()) + 'px)'"
+        >
+          @for (item of items(); track item.id) {
+            <article class="novedades-card novedades-card--horizontal" (click)="openDetail(item)">
               <img class="novedades-card__image" [src]="imageUrl(item)" [alt]="item.titulo" />
               <div class="novedades-card__body">
                 <div class="novedades-card__meta">
@@ -157,11 +164,11 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
                   <span>{{ item.published_at || item.created_at | dateEc: 'dd/MM/yyyy' }}</span>
                 </div>
                 <h4 class="novedades-card__title">{{ item.titulo }}</h4>
-                <p class="novedades-card__desc">{{ excerpt(item.descripcion, 110) }}</p>
+                <p class="novedades-card__desc">{{ excerpt(item.descripcion, 82) }}</p>
 
                 @if (item.tipo === 'evento') {
                   <div class="novedades-card__event">
-                    <span>{{ item.evento_fecha_inicio | dateEc: 'EEEE dd/MM · HH:mm' }}</span>
+                    <span>{{ item.evento_fecha_inicio | dateEc: 'dd/MM · HH:mm' }}</span>
                     <span>{{ item.evento_ubicacion || modalidadLabel(item) }}</span>
                   </div>
                 }
@@ -169,8 +176,33 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
             </article>
           }
         </div>
+      </div>
+
+      @if (items().length > 1) {
+        <div class="novedades-carousel__dots">
+          @for (item of items(); track item.id; let i = $index) {
+            <button
+              class="novedades-carousel__dot"
+              [class.active]="featuredIndex() === i"
+              (click)="featuredIndex.set(i)"
+              [attr.aria-label]="'Ir a la novedad ' + (i + 1)"
+            ></button>
+          }
+        </div>
       }
     </section>
+      } @else {
+      <div class="data-table-wrapper">
+        <div class="novedades-empty">
+          <div class="auth-state-icon auth-state-icon--warning">
+            <i-lucide name="clipboard" />
+          </div>
+          <h4>No hay novedades todavía</h4>
+          <p>Cuando el coach publique contenido nuevo aparecerá aquí automáticamente.</p>
+        </div>
+      </div>
+      }
+    }
 
     @if (selectedItem()) {
       <div class="modal-backdrop" (click)="selectedItem.set(null)">
@@ -220,10 +252,55 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
         </div>
       </div>
     }
+
+    @if (selectedRewardCard()) {
+      <div class="modal-backdrop" (click)="selectedRewardCard.set(null)">
+        <div class="modal modal--wide novedades-modal" (click)="$event.stopPropagation()">
+          <div class="modal__header">
+            <div>
+              <div class="novedades-card__meta">
+                <span class="novedades-type-pill">{{ selectedRewardCard()!.category }}</span>
+                <span>{{ rewardParticipantCount(selectedRewardCard()!) }} inscritos</span>
+              </div>
+              <h3 class="modal__title">{{ selectedRewardCard()!.title }}</h3>
+            </div>
+            <button class="btn btn--ghost btn--icon" (click)="selectedRewardCard.set(null)" aria-label="Cerrar reto">
+              <i-lucide name="circle-x" />
+            </button>
+          </div>
+          <div class="modal__body novedades-modal__body">
+            <div class="stat-card">
+              <div class="stat-card__label">Qué ganas</div>
+              <div class="novedades-modal__stat">{{ selectedRewardCard()!.reward }}</div>
+            </div>
+
+            <div class="novedades-modal__content">
+              <p>{{ selectedRewardCard()!.description }}</p>
+            </div>
+
+            @if (auth.rol() === 'atleta') {
+              <div class="novedades-modal__footer">
+                <button
+                  class="btn btn--primary"
+                  type="button"
+                  (click)="joinReward(selectedRewardCard()!)"
+                  [disabled]="joiningRewardId() === selectedRewardCard()!.id || isJoined(selectedRewardCard()!)"
+                >
+                  {{
+                    joiningRewardId() === selectedRewardCard()!.id
+                      ? 'Inscribiendo...'
+                      : (isJoined(selectedRewardCard()!) ? 'Ya participas' : 'Inscribirme')
+                  }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
-    .novedades-loading-grid,
-    .novedades-grid {
+    .novedades-loading-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 20px;
@@ -233,12 +310,80 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       height: 320px;
     }
 
-    .novedades-featured,
     .novedades-feed {
       margin-bottom: 32px;
     }
 
-    .novedades-featured__header,
+    .novedades-premios {
+      margin-bottom: 28px;
+    }
+
+    .novedades-premios__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      padding: 18px 24px 24px;
+    }
+
+    .novedades-reto-card {
+      border: 1px solid #2b3033;
+      border-radius: 18px;
+      background: rgba(21, 23, 24, 0.94);
+      overflow: hidden;
+      transition: transform 0.22s ease, border-color 0.22s ease;
+    }
+
+    .novedades-reto-card:hover {
+      transform: translateY(-2px);
+      border-color: #a61f24;
+    }
+
+    .novedades-reto-card__summary {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .novedades-reto-card__title {
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f4f1eb;
+      font-size: 20px;
+      line-height: 1;
+      margin: 0;
+    }
+
+    .novedades-reto-card__toggle {
+      color: #938c84;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .novedades-premio-card__reward {
+      color: #d9a441;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .novedades-premio-card__description,
+    .novedades-premio-card__meta {
+      color: #d2cbc1;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     .novedades-feed__toolbar {
       display: flex;
       align-items: center;
@@ -266,21 +411,78 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       color: #f4f1eb;
     }
 
-    .novedades-featured__actions,
-    .novedades-filters {
+    .cumpleanos-section {
+      margin-bottom: 30px;
+    }
+
+    .cumpleanos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .cumpleanos-card {
+      border-radius: 18px;
+      background: rgba(21, 23, 24, 0.9);
+      padding: 16px;
+      border: 1px solid #2b3033;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cumpleanos-card__emoji {
+      font-size: 28px;
+    }
+
+    .cumpleanos-card__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      color: #f4f1eb;
+    }
+
+    .cumpleanos-card__meta strong {
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .cumpleanos-card__meta span {
+      font-size: 12px;
+      color: #938c84;
+    }
+
+    .cumpleanos-card__info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      color: #d2cbc1;
+      line-height: 1.4;
+    }
+
+    .cumpleanos-empty {
+      padding: 12px 0;
+      color: #938c84;
+      font-size: 14px;
+    }
+
+    .novedades-featured__actions {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
     }
 
-    .novedades-carousel {
+    .novedades-horizontal-wrap {
       overflow: hidden;
       border-radius: 20px;
     }
 
-    .novedades-carousel__track {
+    .novedades-horizontal-track {
       display: flex;
+      gap: 18px;
       transition: transform 0.32s ease;
     }
 
@@ -306,48 +508,6 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       transform: scale(1.15);
     }
 
-    .novedades-hero-card {
-      position: relative;
-      min-width: 100%;
-      min-height: 380px;
-      border: 1px solid #2b3033;
-      border-radius: 20px;
-      overflow: hidden;
-      cursor: pointer;
-      background: #151718;
-    }
-
-    .novedades-hero-card__image-wrap,
-    .novedades-hero-card__image,
-    .novedades-hero-card__overlay {
-      position: absolute;
-      inset: 0;
-    }
-
-    .novedades-hero-card__image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .novedades-hero-card__overlay {
-      background:
-        linear-gradient(180deg, rgba(10, 10, 10, 0.08), rgba(10, 10, 10, 0.85) 72%),
-        linear-gradient(90deg, rgba(10, 10, 10, 0.82), rgba(10, 10, 10, 0.12));
-    }
-
-    .novedades-hero-card__body {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      gap: 14px;
-      min-height: 380px;
-      padding: 28px;
-    }
-
-    .novedades-hero-card__title,
     .novedades-card__title {
       font-family: 'Bebas Neue', sans-serif;
       letter-spacing: 0.04em;
@@ -355,25 +515,12 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       color: #f4f1eb;
     }
 
-    .novedades-hero-card__title {
-      font-size: clamp(28px, 4vw, 44px);
-      line-height: 0.95;
-      max-width: 640px;
-    }
-
-    .novedades-hero-card__desc,
     .novedades-card__desc,
     .novedades-modal__content {
       color: #d2cbc1;
       line-height: 1.6;
     }
 
-    .novedades-hero-card__desc {
-      max-width: 620px;
-      font-size: 14px;
-    }
-
-    .novedades-hero-card__meta,
     .novedades-card__meta {
       display: flex;
       align-items: center;
@@ -400,7 +547,6 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       background: rgba(61, 110, 145, 0.18);
     }
 
-    .novedades-hero-card__event-meta,
     .novedades-card__event {
       display: flex;
       gap: 16px;
@@ -409,7 +555,6 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       font-size: 12px;
     }
 
-    .novedades-hero-card__event-meta span,
     .novedades-card__event span {
       display: inline-flex;
       align-items: center;
@@ -430,9 +575,14 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
       border-color: #a61f24;
     }
 
+    .novedades-card--horizontal {
+      min-width: calc(50% - 9px);
+      max-width: calc(50% - 9px);
+    }
+
     .novedades-card__image {
       width: 100%;
-      height: 200px;
+      height: 180px;
       object-fit: cover;
       background: #1d2022;
     }
@@ -445,12 +595,12 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
     }
 
     .novedades-card__title {
-      font-size: 24px;
+      font-size: 22px;
       line-height: 1;
     }
 
     .novedades-card__desc {
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .novedades-empty {
@@ -504,17 +654,31 @@ import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
     }
 
     @media (max-width: 768px) {
-      .novedades-hero-card,
-      .novedades-hero-card__body {
-        min-height: 420px;
-      }
-
       .novedades-modal__event-grid {
         grid-template-columns: 1fr;
       }
 
       .novedades-feed__toolbar {
         align-items: stretch;
+      }
+
+      .novedades-card--horizontal {
+        min-width: calc(100% - 8px);
+        max-width: calc(100% - 8px);
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1100px) {
+      .novedades-card--horizontal {
+        min-width: calc(50% - 9px);
+        max-width: calc(50% - 9px);
+      }
+    }
+
+    @media (min-width: 1101px) {
+      .novedades-card--horizontal {
+        min-width: calc(50% - 9px);
+        max-width: calc(50% - 9px);
       }
     }
   `],
@@ -528,25 +692,22 @@ export class NovedadesComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly items = signal<ContenidoBox[]>([]);
-  readonly selectedFilter = signal<ContenidoTipo | ''>('');
   readonly selectedItem = signal<ContenidoBox | null>(null);
+  readonly selectedRewardCard = signal<RewardCard | null>(null);
   readonly featuredIndex = signal(0);
-
-  readonly filtros = [
-    { label: 'Todos', value: '' as const },
-    { label: 'Noticias', value: 'noticia' as const },
-    { label: 'Eventos', value: 'evento' as const },
-  ];
-
-  readonly filtrados = computed(() => {
-    const filter = this.selectedFilter();
-    return filter ? this.items().filter((item) => item.tipo === filter) : this.items();
-  });
-
-  readonly destacados = computed(() => this.items().slice(0, 5));
+  readonly rewardCards = signal<RewardCard[]>([]);
+  readonly rewardCatalog = signal<RewardCatalogItem[]>([]);
+  readonly joiningRewardId = signal<string | null>(null);
+  readonly cumpleaneros = signal<Cumpleanero[]>([]);
+  readonly cumpleanerosLoading = signal(true);
+  readonly cumpleanerosError = signal(false);
 
   async ngOnInit() {
-    await this.loadContenido();
+    await Promise.all([
+      this.loadContenido(),
+      this.loadRewards(),
+      this.loadCumpleaneros(),
+    ]);
   }
 
   async loadContenido() {
@@ -570,6 +731,146 @@ export class NovedadesComponent implements OnInit {
     }
   }
 
+  async loadRewards() {
+    try {
+      const [{ data: attendanceData }, { data: catalogData }] = await Promise.all([
+        this.supabase.getAttendanceRewardConfig(),
+        this.supabase.getRewardCatalogConfig(),
+      ]);
+
+      const attendanceDetail = attendanceData?.detalle as Partial<AttendanceRewardConfig> | undefined;
+      const attendanceReward = attendanceDetail ? [{
+        id: 'attendance',
+        title: attendanceDetail.rewardName?.trim() || 'Reto de asistencia',
+        reward: attendanceDetail.description?.trim() || 'Reto por constancia del mes.',
+        description: `Inscríbete y mantén al menos ${Number(attendanceDetail.targetPercentage ?? 95)}% de asistencia del mes para competir por este reto.`,
+        category: 'Asistencia',
+        type: 'attendance' as const,
+        participantUserIds: Array.isArray(attendanceDetail.participantUserIds) ? attendanceDetail.participantUserIds : [],
+      }] : [];
+
+      const catalogDetail = catalogData?.detalle as { items?: RewardCatalogItem[] } | undefined;
+      const catalogItems = Array.isArray(catalogDetail?.items) ? catalogDetail.items : [];
+      const normalizedCatalog = catalogItems.map((item) => ({
+        id: item.id,
+        title: item.title?.trim() || 'Premio sin nombre',
+        reward: item.reward?.trim() || 'Premio por anunciar',
+        description: item.description?.trim() || '',
+        category: item.category?.trim() || 'General',
+        type: 'catalog' as const,
+        participantUserIds: Array.isArray(item.participantUserIds) ? item.participantUserIds : [],
+      }));
+
+      this.rewardCatalog.set(normalizedCatalog);
+      this.rewardCards.set([...attendanceReward, ...normalizedCatalog]);
+    } catch (error) {
+      this.sentry.captureError(error, { action: 'loadRewards' });
+    }
+  }
+
+  async loadCumpleaneros() {
+    this.cumpleanerosLoading.set(true);
+    this.cumpleanerosError.set(false);
+    try {
+      const { data, error } = await this.supabase.getCumpleanerosHoy();
+      if (error) {
+        this.cumpleanerosError.set(true);
+        this.sentry.captureError(error, { action: 'loadCumpleaneros' });
+        return;
+      }
+
+      this.cumpleaneros.set((data ?? []) as Cumpleanero[]);
+    } catch (error) {
+      this.cumpleanerosError.set(true);
+      this.sentry.captureError(error, { action: 'loadCumpleanerosUnexpected' });
+    } finally {
+      this.cumpleanerosLoading.set(false);
+    }
+  }
+
+  rewardParticipantCount(reward: RewardCard) {
+    return reward.participantUserIds?.length ?? 0;
+  }
+
+  openRewardDetail(reward: RewardCard) {
+    this.selectedRewardCard.set(reward);
+  }
+
+  isJoined(reward: RewardCard) {
+    const userId = this.auth.currentUser()?.id;
+    if (!userId) return false;
+    return reward.participantUserIds?.includes(userId) ?? false;
+  }
+
+  async joinReward(reward: RewardCard) {
+    const userId = this.auth.currentUser()?.id;
+    if (!userId || this.isJoined(reward) || this.joiningRewardId()) return;
+
+    this.joiningRewardId.set(reward.id);
+    try {
+      if (reward.type === 'attendance') {
+        const { data, error: loadError } = await this.supabase.getAttendanceRewardConfig();
+        if (loadError) {
+          this.sentry.captureError(loadError, { action: 'joinAttendanceReward', rewardId: reward.id });
+          return;
+        }
+
+        const detail = (data?.detalle ?? {}) as AttendanceRewardConfig;
+        const participantUserIds = Array.isArray(detail.participantUserIds) ? detail.participantUserIds : [];
+        const { error } = await this.supabase.saveAttendanceRewardConfig(userId, {
+          ...detail,
+          participantUserIds: [...participantUserIds, userId],
+        } as Record<string, unknown>);
+
+        if (error) {
+          this.sentry.captureError(error, { action: 'joinAttendanceReward', rewardId: reward.id });
+          return;
+        }
+
+        this.rewardCards.update((cards) => cards.map((card) => (
+          card.id === reward.id
+            ? { ...card, participantUserIds: [...(card.participantUserIds ?? []), userId] }
+            : card
+        )));
+        this.selectedRewardCard.update((current) => (
+          current?.id === reward.id
+            ? { ...current, participantUserIds: [...(current.participantUserIds ?? []), userId] }
+            : current
+        ));
+        return;
+      }
+
+      const nextItems = this.rewardCatalog().map((item) => (
+        item.id === reward.id
+          ? {
+              ...item,
+              participantUserIds: [...(item.participantUserIds ?? []), userId],
+            }
+          : item
+      ));
+
+      const { error } = await this.supabase.saveRewardCatalogConfig(userId, { items: nextItems } as Record<string, unknown>);
+      if (error) {
+        this.sentry.captureError(error, { action: 'joinReward', rewardId: reward.id });
+        return;
+      }
+
+      this.rewardCatalog.set(nextItems);
+      this.rewardCards.update((cards) => cards.map((card) => (
+        card.id === reward.id
+          ? { ...card, participantUserIds: [...(card.participantUserIds ?? []), userId] }
+          : card
+      )));
+      this.selectedRewardCard.update((current) => (
+        current?.id === reward.id
+          ? { ...current, participantUserIds: [...(current.participantUserIds ?? []), userId] }
+          : current
+      ));
+    } finally {
+      this.joiningRewardId.set(null);
+    }
+  }
+
   imageUrl(item: ContenidoBox) {
     return this.supabase.getContenidoImageUrl(item.imagen_path);
   }
@@ -578,14 +879,20 @@ export class NovedadesComponent implements OnInit {
     this.selectedItem.set(item);
   }
 
+  slideOffset() {
+    if (typeof window === 'undefined') return 0;
+    if (window.innerWidth <= 768) return window.innerWidth - 32 + 18;
+    return Math.floor((window.innerWidth - 64) / 2) + 9;
+  }
+
   prevFeatured() {
-    const total = this.destacados().length;
+    const total = this.items().length;
     if (total <= 1) return;
     this.featuredIndex.update((current) => (current - 1 + total) % total);
   }
 
   nextFeatured() {
-    const total = this.destacados().length;
+    const total = this.items().length;
     if (total <= 1) return;
     this.featuredIndex.update((current) => (current + 1) % total);
   }

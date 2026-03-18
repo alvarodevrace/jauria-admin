@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Session, User } from '@supabase/supabase-js';
 import * as Sentry from '@sentry/angular';
 import { SupabaseService } from '../services/supabase.service';
+import { AppBusyService } from '../services/app-busy.service';
 import { environment } from '../../../environments/environment';
 
 export interface UserProfile {
@@ -21,10 +22,12 @@ export class AuthService {
   private _session = signal<Session | null>(null);
   private _profile = signal<UserProfile | null>(null);
   private _loading = signal(true);
+  private _logoutInProgress = signal(false);
 
   readonly session  = this._session.asReadonly();
   readonly profile  = this._profile.asReadonly();
   readonly loading  = this._loading.asReadonly();
+  readonly logoutInProgress = this._logoutInProgress.asReadonly();
 
   readonly isAuthenticated = computed(() => !!this._session());
   readonly currentUser     = computed(() => this._session()?.user ?? null);
@@ -44,7 +47,8 @@ export class AuthService {
 
   constructor(
     private supabase: SupabaseService,
-    private router: Router
+    private router: Router,
+    private appBusy: AppBusyService,
   ) { this.init(); }
 
   private async init() {
@@ -98,7 +102,7 @@ export class AuthService {
   private async loadProfile(user: User): Promise<UserProfile | null> {
     const { data, error } = await this.supabase.getProfile(user.id);
     if (!error && data) {
-      const p = data as UserProfile;
+      const p = await this.syncProfileWithMembership(data as UserProfile, user);
       if (!p.activo) {
         this._profile.set(null);
         if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
@@ -111,20 +115,23 @@ export class AuthService {
       return p;
     } else if (error?.code === 'PGRST116') {
       // Perfil no existe — buscamos si el email tiene un cliente vinculado
+      // Usamos RPC SECURITY DEFINER para bypassar RLS (atleta sin perfil aún no tiene id_cliente)
       let idCliente: string | null = null;
+      let nombreCompleto: string = user.user_metadata['nombre_completo'] ?? user.email ?? 'Atleta';
       if (user.email) {
         const { data: clienteData } = await this.supabase.client
-          .from('clientes')
-          .select('id_cliente')
-          .eq('email', user.email.toLowerCase())
-          .limit(1);
-        idCliente = (clienteData?.[0] as { id_cliente?: string } | undefined)?.id_cliente ?? null;
+          .rpc('verificar_membresia_por_email', { p_email: user.email.toLowerCase() });
+        const rows = clienteData as { id_cliente: string; nombre_completo: string; estado: string }[] | null;
+        if (rows && rows.length > 0) {
+          idCliente = rows[0].id_cliente;
+          nombreCompleto = rows[0].nombre_completo;
+        }
       }
 
       const newProfile = {
         id: user.id,
         id_cliente: idCliente,
-        nombre_completo: user.user_metadata['nombre_completo'] ?? user.email ?? 'Atleta',
+        nombre_completo: nombreCompleto,
         email: user.email ?? '',
         rol: 'atleta',
         activo: true,
@@ -141,6 +148,70 @@ export class AuthService {
       }
     }
     return null;
+  }
+
+  private async syncProfileWithMembership(profile: UserProfile, user: User): Promise<UserProfile> {
+    const membership = await this.findMembershipForProfile(profile, user);
+    if (!membership) return profile;
+
+    const nextProfile: UserProfile = {
+      ...profile,
+      id_cliente: membership.id_cliente,
+      nombre_completo: membership.nombre_completo,
+      email: membership.email,
+      rol: 'atleta',
+    };
+
+    const needsUpdate = profile.id_cliente !== nextProfile.id_cliente
+      || profile.nombre_completo !== nextProfile.nombre_completo
+      || profile.email !== nextProfile.email
+      || profile.rol !== nextProfile.rol;
+
+    if (!needsUpdate) return nextProfile;
+
+    const { error } = await this.supabase.updateProfile(profile.id, {
+      id_cliente: nextProfile.id_cliente,
+      nombre_completo: nextProfile.nombre_completo,
+      email: nextProfile.email,
+      rol: nextProfile.rol,
+    });
+
+    if (error) return profile;
+    return nextProfile;
+  }
+
+  private async findMembershipForProfile(profile: UserProfile, user: User) {
+    if (profile.id_cliente) {
+      const { data, error } = await this.supabase.getCliente(profile.id_cliente);
+      if (!error && data) {
+        const cliente = data as {
+          id_cliente: string;
+          nombre_completo: string;
+          email: string;
+        };
+
+        return {
+          id_cliente: cliente.id_cliente,
+          nombre_completo: cliente.nombre_completo,
+          email: cliente.email,
+        };
+      }
+    }
+
+    if (!user.email) return null;
+
+    // Usamos RPC SECURITY DEFINER para bypassar RLS (perfil con id_cliente=null no puede leer clientes)
+    const { data: clienteData, error: rpcError } = await this.supabase.client
+      .rpc('verificar_membresia_por_email', { p_email: user.email.toLowerCase() });
+    const rows = clienteData as { id_cliente: string; nombre_completo: string; estado: string }[] | null;
+
+    if (rpcError || !rows || rows.length === 0) return null;
+
+    return {
+      id_cliente: rows[0].id_cliente,
+      nombre_completo: rows[0].nombre_completo,
+      email: user.email.toLowerCase(),
+    };
   }
 
   async login(email: string, password: string): Promise<{ error: string | null }> {
@@ -168,19 +239,33 @@ export class AuthService {
   }
 
   async logout() {
+    if (this._logoutInProgress()) return;
+
+    this._logoutInProgress.set(true);
+    this.appBusy.start('Cerrando sesión...');
     this._session.set(null);
     this._profile.set(null);
     if (environment.sentryEnabled && environment.sentryDsn) Sentry.setUser(null);
 
     try {
-      await this.supabase.signOut();
+      await Promise.race([
+        this.supabase.signOut(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Logout timed out after 8000ms')), 8000),
+        ),
+      ]);
     } catch (error) {
       if (environment.sentryEnabled && environment.sentryDsn) {
         Sentry.captureException(error);
       }
     } finally {
-      await this.supabase.clearLocalSession();
-      await this.router.navigate(['/auth/login'], { replaceUrl: true });
+      try {
+        await this.supabase.clearLocalSession();
+        await this.router.navigate(['/auth/login'], { replaceUrl: true });
+      } finally {
+        this.appBusy.stop();
+        this._logoutInProgress.set(false);
+      }
     }
   }
 

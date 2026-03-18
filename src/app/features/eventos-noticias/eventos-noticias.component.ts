@@ -660,25 +660,30 @@ export class EventosNoticiasComponent implements OnInit {
 
   async togglePublication(item: ContenidoBox) {
     this.actionLoadingId.set(item.id);
-    const nextState: EstadoPublicacion = item.estado_publicacion === 'published' ? 'draft' : 'published';
-    const { error } = await this.supabase.setContenidoPublicationState(item.id, nextState);
-    this.actionLoadingId.set(null);
+    try {
+      const nextState: EstadoPublicacion = item.estado_publicacion === 'published' ? 'draft' : 'published';
+      const { error } = await this.supabase.setContenidoPublicationState(item.id, nextState);
 
-    if (error) {
-      this.toast.error(error.message);
-      return;
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      const userId = this.auth.currentUser()?.id;
+      if (userId) {
+        await this.supabase.logAuditoria(userId, 'contenido_box_publication_changed', {
+          contenidoId: item.id,
+          estado: nextState,
+        });
+      }
+
+      this.toast.success(nextState === 'published' ? 'Contenido publicado' : 'Contenido movido a borrador');
+      await this.loadItems();
+    } catch {
+      this.toast.error('No se pudo cambiar el estado de publicación');
+    } finally {
+      this.actionLoadingId.set(null);
     }
-
-    const userId = this.auth.currentUser()?.id;
-    if (userId) {
-      await this.supabase.logAuditoria(userId, 'contenido_box_publication_changed', {
-        contenidoId: item.id,
-        estado: nextState,
-      });
-    }
-
-    this.toast.success(nextState === 'published' ? 'Contenido publicado' : 'Contenido movido a borrador');
-    await this.loadItems();
   }
 
   async deleteItem(item: ContenidoBox) {
@@ -692,21 +697,26 @@ export class EventosNoticiasComponent implements OnInit {
     if (!confirmed) return;
 
     this.actionLoadingId.set(item.id);
-    const { error } = await this.supabase.deleteContenido(item.id, item.imagen_path);
-    this.actionLoadingId.set(null);
+    try {
+      const { error } = await this.supabase.deleteContenido(item.id, item.imagen_path);
 
-    if (error) {
-      this.toast.error(error.message);
-      return;
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      const userId = this.auth.currentUser()?.id;
+      if (userId) {
+        await this.supabase.logAuditoria(userId, 'contenido_box_deleted', { contenidoId: item.id });
+      }
+
+      this.toast.success('Contenido eliminado');
+      await this.loadItems();
+    } catch {
+      this.toast.error('No se pudo eliminar el contenido');
+    } finally {
+      this.actionLoadingId.set(null);
     }
-
-    const userId = this.auth.currentUser()?.id;
-    if (userId) {
-      await this.supabase.logAuditoria(userId, 'contenido_box_deleted', { contenidoId: item.id });
-    }
-
-    this.toast.success('Contenido eliminado');
-    await this.loadItems();
   }
 
   imageUrl(item: ContenidoBox) {

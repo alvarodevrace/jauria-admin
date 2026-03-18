@@ -576,6 +576,12 @@ export class SupabaseService {
     );
   }
 
+  async getCumpleanerosHoy() {
+    return this.withQueryTimeout('getCumpleanerosHoy', () =>
+      this.client.rpc('get_cumpleaneros_hoy'),
+    );
+  }
+
   async saveRewardCatalogConfig(userId: string, detalle: Record<string, unknown>) {
     const result = await this.withMutationTimeout('saveRewardCatalogConfig', () =>
       this.client.from('auditoria_config').insert({
