@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -28,36 +28,73 @@ interface Conversacion {
     </div>
 
     @if (loading()) {
-      <div style="text-align:center;padding:60px;color:#666;">Cargando...</div>
+      <div style="text-align:center;padding:60px;color:#938C84;">Cargando...</div>
     } @else {
+      <div class="stats-grid" style="margin-bottom:24px;">
+        <div class="stat-card">
+          <div class="stat-card__label">En riesgo</div>
+          <div class="stat-card__value">{{ conversacionesRiesgo().length }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Expiran hoy</div>
+          <div class="stat-card__value">{{ expiranHoy() }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__label">Escalado recomendado</div>
+          <div class="stat-card__value">{{ escalarRecomendado() }}</div>
+        </div>
+      </div>
+
       <div style="display:flex;flex-direction:column;gap:16px;">
-        @for (conv of conversaciones(); track conv.id) {
-          <div class="service-card" style="flex-direction:column;align-items:flex-start;gap:16px;">
+        @for (conv of conversacionesOrdenadas(); track conv.id) {
+          <div
+            class="service-card"
+            style="flex-direction:column;align-items:flex-start;gap:16px;border-left:4px solid;"
+            [style.border-left-color]="urgencyColor(conv)"
+          >
             <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
               <div>
-                <div style="font-weight:600;color:#fff;font-size:15px;">
+                <div style="font-weight:600;color:#f4f1eb;font-size:15px;">
                   {{ conv.clientes?.nombre_completo ?? 'Cliente' }}
                 </div>
-                <div style="font-size:12px;color:#666;margin-top:2px;">
+                <div style="font-size:12px;color:#938C84;margin-top:2px;">
                   {{ conv.telefono_whatsapp }} · Banco: {{ conv.banco_seleccionado || '—' }}
                 </div>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
                 <span class="badge badge--{{ estadoBadge(conv.estado) }}">{{ conv.estado }}</span>
-                <span style="font-size:12px;color:#666;">Intentos: {{ conv.intentos_validacion }}/3</span>
+                <span class="badge" [style.background]="urgencyBg(conv)" [style.color]="urgencyColor(conv)">
+                  {{ urgencyLabel(conv) }}
+                </span>
+                <span style="font-size:12px;color:#938C84;">Intentos: {{ conv.intentos_validacion }}/3</span>
               </div>
             </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn--ghost btn--sm" (click)="escalar(conv.id)">Escalar a Coach</button>
-              <button class="btn btn--danger btn--sm" (click)="cerrar(conv.id)">Cerrar</button>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;width:100%;">
+              <div class="stat-card">
+                <div class="stat-card__label">Vencimiento</div>
+                <div class="stat-card__value" style="font-size:18px;">{{ tiempoRestante(conv) }}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card__label">Próxima acción</div>
+                <div class="stat-card__value" style="font-size:18px;">{{ nextAction(conv) }}</div>
+              </div>
             </div>
-            <div style="font-size:11px;color:#444;">
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn--ghost btn--sm" (click)="escalar(conv.id)" [disabled]="isBusy(conv.id)">
+                {{ conv.intentos_validacion >= 2 ? 'Escalar ahora' : 'Escalar a Coach' }}
+              </button>
+              <button class="btn btn--danger btn--sm" (click)="cerrar(conv.id)" [disabled]="isBusy(conv.id)">Cerrar conversación</button>
+            </div>
+
+            <div style="font-size:11px;color:#938C84;">
               Iniciada: {{ conv.created_at | dateEc : 'dd/MM/yyyy HH:mm' }} ·
               Expira: {{ conv.expires_at | dateEc : 'dd/MM/yyyy HH:mm' }}
             </div>
           </div>
         } @empty {
-          <div style="text-align:center;padding:60px;color:#666;">
+          <div style="text-align:center;padding:60px;color:#938C84;">
             No hay conversaciones activas en este momento.
           </div>
         }
@@ -71,12 +108,31 @@ export class ConversacionesComponent implements OnInit {
 
   conversaciones = signal<Conversacion[]>([]);
   loading = signal(true);
+  actionLoading = signal<Record<string, boolean>>({});
+
+  conversacionesOrdenadas = computed(() => {
+    return [...this.conversaciones()].sort((a, b) => this.urgencyScore(b) - this.urgencyScore(a));
+  });
+
+  conversacionesRiesgo = computed(() => this.conversaciones().filter((conv) => this.urgencyScore(conv) >= 3));
+  expiranHoy = computed(() => this.conversaciones().filter((conv) => this.hoursUntilExpiry(conv) <= 24).length);
+  escalarRecomendado = computed(() => this.conversaciones().filter((conv) => conv.intentos_validacion >= 2).length);
 
   async ngOnInit() {
-    const { data, error } = await this.supabase.getConversacionesActivas();
-    this.loading.set(false);
-    if (error) { this.toast.error(error.message); return; }
-    this.conversaciones.set((data ?? []) as unknown as Conversacion[]);
+    this.loading.set(true);
+    try {
+      const { data, error } = await this.supabase.getConversacionesActivas();
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.conversaciones.set((data ?? []) as unknown as Conversacion[]);
+    } catch {
+      this.toast.error('No se pudieron cargar las conversaciones');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   estadoBadge(estado: string): string {
@@ -89,15 +145,106 @@ export class ConversacionesComponent implements OnInit {
     return map[estado] ?? 'inactivo';
   }
 
+  hoursUntilExpiry(conv: Conversacion): number {
+    return Math.ceil((new Date(conv.expires_at).getTime() - Date.now()) / 3600000);
+  }
+
+  urgencyScore(conv: Conversacion): number {
+    const hours = this.hoursUntilExpiry(conv);
+    if (hours <= 6 || conv.intentos_validacion >= 3) return 4;
+    if (hours <= 24 || conv.intentos_validacion >= 2) return 3;
+    if (hours <= 48) return 2;
+    return 1;
+  }
+
+  urgencyLabel(conv: Conversacion): string {
+    const score = this.urgencyScore(conv);
+    if (score >= 4) return 'Critica';
+    if (score === 3) return 'Alta';
+    if (score === 2) return 'Media';
+    return 'Estable';
+  }
+
+  urgencyColor(conv: Conversacion): string {
+    const score = this.urgencyScore(conv);
+    if (score >= 4) return '#C1454A';
+    if (score === 3) return '#C58A2A';
+    if (score === 2) return '#D6A847';
+    return '#3D8B6D';
+  }
+
+  urgencyBg(conv: Conversacion): string {
+    const score = this.urgencyScore(conv);
+    if (score >= 4) return 'rgba(193,69,74,0.18)';
+    if (score === 3) return 'rgba(197,138,42,0.18)';
+    if (score === 2) return 'rgba(214,168,71,0.18)';
+    return 'rgba(61,139,109,0.18)';
+  }
+
+  tiempoRestante(conv: Conversacion): string {
+    const hours = this.hoursUntilExpiry(conv);
+    if (hours <= 0) return 'Expirada';
+    if (hours < 24) return `${hours} h restantes`;
+    const days = Math.ceil(hours / 24);
+    return `${days} dia(s) restantes`;
+  }
+
+  nextAction(conv: Conversacion): string {
+    if (conv.intentos_validacion >= 2) return 'Revisar y escalar';
+    if (this.hoursUntilExpiry(conv) <= 24) return 'Resolver hoy';
+    if (conv.estado === 'esperando_banco') return 'Esperar banco';
+    return 'Validar comprobante';
+  }
+
   async escalar(id: number) {
-    await this.supabase.updateConversacion(id, { estado: 'escalado' });
-    this.toast.success('Conversación escalada');
-    this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    this.setBusy(id, true);
+    try {
+      const { error } = await this.supabase.updateConversacion(id, { estado: 'escalado' });
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.toast.success('Conversación escalada');
+      this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    } catch {
+      this.toast.error('No se pudo escalar la conversación');
+    } finally {
+      this.setBusy(id, false);
+    }
   }
 
   async cerrar(id: number) {
-    await this.supabase.updateConversacion(id, { estado: 'fallido' });
-    this.toast.info('Conversación cerrada');
-    this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    this.setBusy(id, true);
+    try {
+      const { error } = await this.supabase.updateConversacion(id, { estado: 'fallido' });
+      if (error) {
+        this.toast.error(error.message);
+        return;
+      }
+
+      this.toast.info('Conversación cerrada');
+      this.conversaciones.update((list) => list.filter((c) => c.id !== id));
+    } catch {
+      this.toast.error('No se pudo cerrar la conversación');
+    } finally {
+      this.setBusy(id, false);
+    }
+  }
+
+  isBusy(id: number) {
+    return this.actionLoading()[String(id)] === true;
+  }
+
+  private setBusy(id: number, busy: boolean) {
+    const key = String(id);
+    this.actionLoading.update((state) => {
+      if (!busy) {
+        const { [key]: _removed, ...rest } = state;
+        return rest;
+      }
+
+      return { ...state, [key]: true };
+    });
   }
 }

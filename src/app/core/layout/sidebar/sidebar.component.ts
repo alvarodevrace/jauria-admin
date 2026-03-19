@@ -1,13 +1,16 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, NavigationEnd, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../auth/auth.service';
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterLink, RouterLinkActive, CommonModule, LucideAngularModule],
   template: `
     <!-- Mobile overlay -->
     @if (mobileOpen()) {
@@ -16,7 +19,7 @@ import { AuthService } from '../../auth/auth.service';
 
     <aside class="sidebar" [class.open]="mobileOpen()">
       <div class="sidebar__logo">
-        <div class="sidebar__logo-icon">J</div>
+        <img class="sidebar__logo-icon" src="assets/logo.png" alt="Jauría logo" />
         <div>
           <span class="sidebar__logo-name">Jauría</span>
           <span class="sidebar__logo-sub">Admin Panel</span>
@@ -28,84 +31,111 @@ import { AuthService } from '../../auth/auth.service';
         <!-- General — todos los roles -->
         <span class="sidebar__section-label">General</span>
 
+        <a class="sidebar__item" routerLink="/app/novedades" routerLinkActive="active" (click)="close()">
+          <i-lucide class="sidebar__item-icon" name="clipboard" />
+          <span>Novedades</span>
+        </a>
+
         <a class="sidebar__item" routerLink="/app/clases" routerLinkActive="active" (click)="close()">
-          <span class="sidebar__item-icon">🏋️</span>
+          <i-lucide class="sidebar__item-icon" name="barbell" />
           <span>Clases</span>
         </a>
 
-        <a class="sidebar__item" routerLink="/app/mi-cuenta" routerLinkActive="active" (click)="close()">
-          <span class="sidebar__item-icon">👤</span>
-          <span>Mi Cuenta</span>
+        <a class="sidebar__item" routerLink="/app/retos" routerLinkActive="active" (click)="close()">
+          <i-lucide class="sidebar__item-icon" name="trophy" />
+          <span>Retos</span>
         </a>
 
-        @if (auth.rol() === 'usuario') {
+        @if (auth.rol() === 'atleta') {
           <a class="sidebar__item" routerLink="/app/mi-pago" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">💳</span>
+            <i-lucide class="sidebar__item-icon" name="credit-card" />
             <span>Mi Pago</span>
           </a>
         }
 
         <!-- Coach + Admin -->
-        @if (auth.isCoach()) {
-          <span class="sidebar__section-label">Gestión</span>
-
-          <a class="sidebar__item" routerLink="/app/clientes" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">👥</span>
-            <span>Clientes</span>
-          </a>
-
-          <a class="sidebar__item" routerLink="/app/pagos" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">💰</span>
-            <span>Pagos</span>
-          </a>
-
-          <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">💬</span>
-            <span>Conversaciones WA</span>
-          </a>
-
-          <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">⚙️</span>
-            <span>Configuración</span>
-          </a>
-        }
-
-        <!-- Admin only -->
-        @if (auth.isAdmin()) {
-          <span class="sidebar__section-label">Sistema</span>
+        @if (auth.canManageBusinessOperations()) {
+          <span class="sidebar__section-label">Operación</span>
 
           <a class="sidebar__item" routerLink="/app/dashboard" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">📊</span>
+            <i-lucide class="sidebar__item-icon" name="chart-bar" />
             <span>Dashboard</span>
           </a>
 
-          <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">📋</span>
-            <span>Leads</span>
+          <a class="sidebar__item" routerLink="/app/clientes" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="users" />
+            <span>Atletas</span>
+          </a>
+
+          <a class="sidebar__item" routerLink="/app/pagos" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="wallet" />
+            <span>Pagos</span>
+          </a>
+          @if (auth.canViewLeadInbox()) {
+            <a class="sidebar__item" routerLink="/app/leads" routerLinkActive="active" (click)="close()">
+              <i-lucide class="sidebar__item-icon" name="clipboard" />
+              <span>Leads</span>
+            </a>
+          }
+
+          <a class="sidebar__item" routerLink="/app/eventos-noticias" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="mail" />
+            <span>Eventos y Noticias</span>
+          </a>
+
+          @if (auth.canManageUsers()) {
+            <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">
+              <i-lucide class="sidebar__item-icon" name="users" />
+              <span>Usuarios</span>
+            </a>
+          }
+        }
+
+        <!-- Admin only -->
+        @if (auth.canManageInfrastructure()) {
+          <span class="sidebar__section-label">Sistema</span>
+
+          <a class="sidebar__item" routerLink="/app/conversaciones" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="message" />
+            <span>Conversaciones WA</span>
           </a>
 
           <a class="sidebar__item" routerLink="/app/workflows" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">⚡</span>
+            <i-lucide class="sidebar__item-icon" name="bolt" />
             <span>Workflows n8n</span>
           </a>
 
-          <a class="sidebar__item" routerLink="/app/roles" routerLinkActive="active" (click)="close()">
-            <span class="sidebar__item-icon">🔑</span>
-            <span>Gestión de Roles</span>
+          <a class="sidebar__item" routerLink="/app/configuracion" routerLinkActive="active" (click)="close()">
+            <i-lucide class="sidebar__item-icon" name="settings-2" />
+            <span>Configuración del Sistema</span>
           </a>
         }
       </nav>
 
       <div class="sidebar__footer">
-        <div class="sidebar__user-mini">
-          <div class="sidebar__user-avatar">{{ initials() }}</div>
+        <button class="sidebar__profile-entry" type="button" (click)="goToProfile()" title="Abrir Mi Cuenta">
+          @if (avatarUrl()) {
+            <img class="sidebar__user-avatar sidebar__user-avatar--image" [src]="avatarUrl()!" [alt]="'Avatar de ' + firstName()" />
+          } @else {
+            <div class="sidebar__user-avatar">{{ initials() }}</div>
+          }
           <div class="sidebar__user-text">
             <span class="sidebar__user-name">{{ firstName() }}</span>
             <span class="sidebar__user-role">{{ auth.rol() }}</span>
           </div>
-        </div>
-        <button class="sidebar__logout" (click)="auth.logout()" title="Cerrar sesión">
-          ↩
+        </button>
+        <button
+          class="sidebar__logout"
+          (click)="auth.logout()"
+          title="Cerrar sesión"
+          [disabled]="auth.logoutInProgress()"
+          [attr.aria-busy]="auth.logoutInProgress()"
+        >
+          @if (auth.logoutInProgress()) {
+            <i-lucide class="sidebar__logout-spinner" name="loader-circle" />
+          } @else {
+            <i-lucide name="logout-2" />
+          }
         </button>
       </div>
     </aside>
@@ -114,7 +144,7 @@ import { AuthService } from '../../auth/auth.service';
     .sidebar-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(8, 9, 10, 0.7);
       z-index: 999;
     }
     .sidebar__logo {
@@ -125,14 +155,7 @@ import { AuthService } from '../../auth/auth.service';
     .sidebar__logo-icon {
       width: 36px;
       height: 36px;
-      background: #B71C1C;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      color: #fff;
+      object-fit: contain;
       flex-shrink: 0;
     }
     .sidebar__logo-name {
@@ -140,23 +163,51 @@ import { AuthService } from '../../auth/auth.service';
       font-family: 'Bebas Neue', sans-serif;
       font-size: 18px;
       letter-spacing: 0.05em;
-      color: #fff;
+      color: #f4f1eb;
       text-transform: uppercase;
       line-height: 1;
     }
     .sidebar__logo-sub {
       display: block;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Manrope', sans-serif;
       font-size: 10px;
-      color: #666;
+      color: #938c84;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       margin-top: 2px;
     }
     .sidebar__item-icon {
-      font-size: 16px;
       width: 20px;
+      height: 20px;
       flex-shrink: 0;
+      color: currentColor;
+    }
+    .sidebar__profile-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 6px 8px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .sidebar__profile-entry:hover {
+      background: #1d2022;
+      border-color: #2b3033;
+    }
+    .sidebar__profile-entry:focus-visible {
+      outline: none;
+      border-color: #a61f24;
+      box-shadow: 0 0 0 2px rgba(166, 31, 36, 0.24);
+    }
+    .sidebar__profile-entry .sidebar__user-text,
+    .sidebar__profile-entry .sidebar__user-avatar {
+      pointer-events: none;
     }
     .sidebar__user-mini {
       display: flex;
@@ -168,15 +219,19 @@ import { AuthService } from '../../auth/auth.service';
     .sidebar__user-avatar {
       width: 30px;
       height: 30px;
-      background: #B71C1C;
+      background: #A61F24;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Bebas Neue', sans-serif;
       font-size: 13px;
-      color: #fff;
+      color: #f4f1eb;
       flex-shrink: 0;
+    }
+    .sidebar__user-avatar--image {
+      object-fit: cover;
+      border: 1px solid rgba(166, 31, 36, 0.35);
     }
     .sidebar__user-text {
       display: flex;
@@ -184,18 +239,18 @@ import { AuthService } from '../../auth/auth.service';
       min-width: 0;
     }
     .sidebar__user-name {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Manrope', sans-serif;
       font-size: 13px;
       font-weight: 600;
-      color: #fff;
+      color: #f4f1eb;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
     .sidebar__user-role {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Manrope', sans-serif;
       font-size: 10px;
-      color: #666;
+      color: #938c84;
       text-transform: capitalize;
     }
     .sidebar__footer {
@@ -205,31 +260,50 @@ import { AuthService } from '../../auth/auth.service';
     }
     .sidebar__logout {
       background: none;
-      border: 1px solid #2a2a2a;
-      color: #666;
+      border: 1px solid #2b3033;
+      color: #938c84;
       width: 30px;
       height: 30px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      &:hover { border-color: #B71C1C; color: #B71C1C; }
+      &:hover { border-color: #A61F24; color: #A61F24; background: #1d2022; }
+      &:disabled {
+        cursor: wait;
+        opacity: 0.75;
+        border-color: #4a4f53;
+        color: #f4f1eb;
+        background: #1d2022;
+      }
+    }
+    .sidebar__logout-spinner {
+      animation: sidebarSpin 0.9s linear infinite;
+    }
+    @keyframes sidebarSpin {
+      to { transform: rotate(360deg); }
     }
   `],
 })
 export class SidebarComponent {
   auth = inject(AuthService);
+  private supabase = inject(SupabaseService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   mobileOpen = signal(false);
 
   constructor() {
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      this.mobileOpen.set(false);
-    });
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.mobileOpen.set(false);
+      });
   }
 
   open()  { this.mobileOpen.set(true); }
@@ -244,5 +318,17 @@ export class SidebarComponent {
   firstName() {
     const name = this.auth.profile()?.nombre_completo ?? 'Usuario';
     return name.split(' ')[0] ?? 'Usuario';
+  }
+
+  goToProfile() {
+    this.close();
+    this.router.navigate(['/app/mi-cuenta']);
+  }
+
+  avatarUrl() {
+    const path = this.auth.profile()?.avatar_url;
+    if (!path) return null;
+    if (/^https?:\/\//.test(path)) return path;
+    return this.supabase.getProfileAvatarUrl(path);
   }
 }

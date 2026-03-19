@@ -1,20 +1,28 @@
 // =============================================
 // COLOR PALETTE
 // =============================================
-$color-bg:       #0a0a0a;
-$color-surface:  #141414;
-$color-surface2: #1e1e1e;
-$color-primary:  #B71C1C;
-$color-white:    #FFFFFF;
-$color-text:     #CCCCCC;
-$color-muted:    #666666;
-$color-border:   #2a2a2a;
+$color-bg:           #0e0f10;
+$color-surface:      #151718;
+$color-surface2:     #1d2022;
+$color-surface-hover:#252a2d;
+$color-primary:      #a61f24;
+$color-primary-hover:#c12a30;
+$color-primary-soft: rgba(166, 31, 36, 0.12);
+$color-white:        #f4f1eb;
+$color-text:         #d2cbc1;
+$color-muted:        #938c84;
+$color-border:       #2b3033;
+$color-border-strong:#3a4044;
+$color-success:      #3d8b6d;
+$color-warning:      #c58a2a;
+$color-info:         #3d6e91;
+$color-danger:       #c1454a;
 
 // =============================================
 // TYPOGRAPHY
 // =============================================
 $font-heading: 'Bebas Neue', sans-serif;
-$font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-body:    'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
 // =============================================
 // BREAKPOINTS

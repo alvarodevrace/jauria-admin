@@ -1,45 +1,32 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 const N8N_SERVICE_UUID = 'rwk0w08ggswcssc4c4ow4gwk';
-const EVOLUTION_SERVICE_UUID = 'dsg88c0wgsw0o0cs4400oc8s';
 
 @Injectable({ providedIn: 'root' })
 export class CoolifyService {
-  private readonly base = environment.coolifyUrl;
-  private readonly headers = new HttpHeaders({
-    Authorization: `Bearer ${environment.coolifyToken}`,
-    'Content-Type': 'application/json',
-  });
+  private readonly base = `${environment.backendApiUrl}/infra`;
 
   constructor(private http: HttpClient) {}
 
-  getN8nService(): Observable<unknown> {
-    return this.http.get(`${this.base}/services/${N8N_SERVICE_UUID}`, { headers: this.headers });
+  getServices() {
+    return this.http.get(`${this.base}/services`);
   }
 
-  getEvolutionService(): Observable<unknown> {
-    return this.http.get(`${this.base}/services/${EVOLUTION_SERVICE_UUID}`, { headers: this.headers });
+  getEnvVars(serviceUuid: string) {
+    return this.http.get<CoolifyEnvVar[]>(`${this.base}/services/${serviceUuid}/envs`);
   }
 
-  updateEnvVars(serviceUuid: string, vars: EnvVar[]): Observable<unknown> {
-    return this.http.patch(
-      `${this.base}/services/${serviceUuid}/envs/bulk`,
-      { data: vars },
-      { headers: this.headers }
-    );
+  updateEnvVars(serviceUuid: string, vars: EnvVar[]) {
+    return this.http.patch(`${this.base}/services/${serviceUuid}/envs/bulk`, { data: vars });
   }
 
-  restartService(serviceUuid: string): Observable<unknown> {
-    return this.http.get(
-      `${this.base}/services/${serviceUuid}/restart`,
-      { headers: this.headers }
-    );
+  restartService(serviceUuid: string) {
+    return this.http.post(`${this.base}/services/${serviceUuid}/restart`, {});
   }
 
-  updateN8nEnvVar(key: string, value: string): Observable<unknown> {
+  updateN8nEnvVar(key: string, value: string) {
     return this.updateEnvVars(N8N_SERVICE_UUID, [{ key, value }]);
   }
 }
@@ -47,6 +34,14 @@ export class CoolifyService {
 export interface EnvVar {
   key: string;
   value: string;
+}
+
+export interface CoolifyEnvVar {
+  uuid: string;
+  key: string;
+  value: string;
+  is_buildtime: boolean;
+  is_runtime: boolean;
 }
 
 export const N8N_ENV_UUIDS: Record<string, string> = {

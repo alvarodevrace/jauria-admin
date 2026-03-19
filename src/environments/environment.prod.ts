@@ -1,13 +1,10 @@
 export const environment = {
   production: true,
   supabaseUrl: 'https://bxatcmcommoqnxnyqchu.supabase.co',
-  supabaseAnonKey: '', // Set via CI/CD secret: SUPABASE_ANON_KEY
-  n8nApiUrl: 'https://n8n.alvarodevrace.tech/api/v1',
-  n8nApiKey: '', // Set via CI/CD secret: N8N_API_KEY
-  coolifyUrl: 'https://coolify.alvarodevrace.tech/api/v1',
-  coolifyToken: '', // Set via CI/CD secret: COOLIFY_TOKEN
-  evolutionApiUrl: 'https://evolution.alvarodevrace.tech',
-  evolutionApiKey: '', // Set via CI/CD secret: EVOLUTION_API_KEY
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4YXRjbWNvbW1vcW54bnlxY2h1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMTczNDQsImV4cCI6MjA4Nzc5MzM0NH0.rhB-c1NP5YIUzIgMptKlFM8RKewIDaapwM8DxwPyntg',
+  backendApiUrl: 'https://api.jauriacrossfitness.com/api/v1',
+  externalOpsChecksEnabled: true,
   // GlitchTip DSN — actualizar cuando DNS glitchtip.alvarodevrace.tech esté configurado
+  sentryEnabled: true,
   sentryDsn: 'https://8a43cf1897b44e1ba32121e2e3368cd5@glitchtip.alvarodevrace.tech/1',
 };

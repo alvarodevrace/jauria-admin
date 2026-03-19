@@ -1,20 +1,23 @@
-import { Component, inject, Output, EventEmitter, computed } from '@angular/core';
+import { Component, DestroyRef, inject, Output, EventEmitter, computed, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
 
 const ROUTE_TITLES: Record<string, string> = {
+  '/app/novedades':      'Novedades',
   '/app/dashboard':      'Dashboard',
-  '/app/clientes':       'Clientes',
+  '/app/clientes':       'Atletas',
   '/app/clases':         'Clases',
   '/app/pagos':          'Pagos',
+  '/app/premios':        'Retos',
   '/app/conversaciones': 'Conversaciones WhatsApp',
   '/app/leads':          'Leads',
   '/app/configuracion':  'Configuración',
+  '/app/eventos-noticias': 'Eventos y Noticias',
   '/app/workflows':      'Workflows n8n',
   '/app/mi-cuenta':      'Mi Cuenta',
   '/app/mi-pago':        'Mi Pago',
-  '/app/roles':          'Gestión de Roles',
+  '/app/roles':          'Usuarios',
 };
 
 @Component({
@@ -22,25 +25,21 @@ const ROUTE_TITLES: Record<string, string> = {
   standalone: true,
   template: `
     <header class="topbar">
-      <div style="display:flex;align-items:center;gap:16px;">
+      <div class="topbar__context">
         <button class="topbar__hamburger" (click)="menuClick.emit()" aria-label="Menú">
           <span></span><span></span><span></span>
         </button>
         <h1 class="topbar__title">{{ pageTitle() }}</h1>
       </div>
-
-      <div class="topbar__actions">
-        <div class="topbar__user">
-          <div class="topbar__avatar">{{ initials() }}</div>
-          <div class="topbar__user-info">
-            <span class="name">{{ auth.profile()?.nombre_completo ?? 'Usuario' }}</span>
-            <span class="role">{{ auth.rol() }}</span>
-          </div>
-        </div>
-      </div>
     </header>
   `,
   styles: [`
+    .topbar__context {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
     .topbar__hamburger {
       display: none;
       flex-direction: column;
@@ -53,11 +52,17 @@ const ROUTE_TITLES: Record<string, string> = {
         display: block;
         width: 20px;
         height: 2px;
-        background: #ccc;
+        background: #938c84;
         border-radius: 2px;
         transition: 0.2s ease;
       }
-      &:hover span { background: #fff; }
+      &:hover span { background: #f4f1eb; }
+    }
+    .topbar__title {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     @media (max-width: 1024px) {
       .topbar__hamburger { display: flex; }
@@ -66,22 +71,26 @@ const ROUTE_TITLES: Record<string, string> = {
 })
 export class TopbarComponent {
   @Output() menuClick = new EventEmitter<void>();
-  auth = inject(AuthService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+  private currentUrl = signal(this.getCurrentUrl());
 
   pageTitle = computed(() => {
-    const url = this.router.url.split('?')[0];
-    return ROUTE_TITLES[url] ?? 'Panel Admin';
+    return ROUTE_TITLES[this.currentUrl()] ?? 'Panel Admin';
   });
 
   constructor() {
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      // trigger computed re-evaluation
-    });
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.currentUrl.set(this.getCurrentUrl());
+      });
   }
 
-  initials() {
-    const name = this.auth.profile()?.nombre_completo ?? '';
-    return name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase() || 'U';
+  private getCurrentUrl(): string {
+    return this.router.url.split('?')[0];
   }
 }

@@ -7,7 +7,7 @@
 // GOOGLE FONTS
 // =============================================
 
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 // =============================================
 // RESET & BASE
@@ -22,15 +22,32 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   font-family: v.$font-body;
   background: v.$color-bg;
-  color: v.$color-white;
+  color: v.$color-text;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+body > app-root {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: clip;
 }
 
 a {
@@ -49,4 +66,10 @@ input, select, textarea {
 img {
   max-width: 100%;
   display: block;
+}
+
+svg,
+canvas,
+video {
+  max-width: 100%;
 }

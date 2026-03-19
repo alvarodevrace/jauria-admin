@@ -4,7 +4,9 @@ import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment';
 
-if (environment.sentryDsn) {
+const sentryEnabled = environment.sentryEnabled && !!environment.sentryDsn;
+
+if (sentryEnabled) {
   Sentry.init({
     dsn: environment.sentryDsn,
     environment: environment.production ? 'production' : 'development',
@@ -21,5 +23,5 @@ if (environment.sentryDsn) {
 bootstrapApplication(AppComponent, appConfig)
   .catch((err) => {
     console.error(err);
-    if (environment.sentryDsn) Sentry.captureException(err);
+    if (sentryEnabled) Sentry.captureException(err);
   });
