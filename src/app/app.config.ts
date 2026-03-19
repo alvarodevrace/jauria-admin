@@ -2,6 +2,7 @@ import { ApplicationConfig, ErrorHandler, importProvidersFrom } from '@angular/c
 import { provideRouter, withViewTransitions, withRouterConfig } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideServiceWorker } from '@angular/service-worker';
 import * as Sentry from '@sentry/angular';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -44,6 +45,10 @@ const providers: ApplicationConfig['providers'] = [
   provideRouter(routes, withViewTransitions(), withRouterConfig({ onSameUrlNavigation: 'reload' })),
   provideHttpClient(withInterceptors([jwtInterceptor, httpErrorInterceptor])),
   provideAnimations(),
+  provideServiceWorker('ngsw-worker.js', {
+    enabled: environment.production,
+    registrationStrategy: 'registerWhenStable:30000',
+  }),
   importProvidersFrom(
     LucideAngularModule.pick({
       AlertTriangle: TriangleAlert,
