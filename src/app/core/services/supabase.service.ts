@@ -18,6 +18,7 @@ export class SupabaseService {
   private readonly storageKey = 'jauria-admin-auth-v2';
   private readonly legacyStorageKeys = ['jauria-admin-auth'];
   private readonly mutationTimeoutMs = 30000;
+  private readonly queryTimeoutMs = 45000;
 
   constructor() {
     this.cleanupLegacyAuthStorage();
@@ -73,8 +74,8 @@ export class SupabaseService {
         new Promise<any>((resolve) =>
           setTimeout(() => resolve({
             data: null,
-            error: new Error(`${label} timed out after ${this.mutationTimeoutMs}ms`),
-          }), this.mutationTimeoutMs),
+            error: new Error(`${label} timed out after ${this.queryTimeoutMs}ms`),
+          }), this.queryTimeoutMs),
         ),
       ]);
     } catch (error) {

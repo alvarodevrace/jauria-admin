@@ -717,7 +717,9 @@ export class NovedadesComponent implements OnInit {
       const { data, error } = await this.supabase.getContenidoPublicado();
       if (error) {
         this.error.set(true);
-        this.sentry.captureError(error, { action: 'loadContenidoPublicado' });
+        if (!this.isTimeoutError(error)) {
+          this.sentry.captureError(error, { action: 'loadContenidoPublicado' });
+        }
         return;
       }
 
@@ -725,7 +727,9 @@ export class NovedadesComponent implements OnInit {
       this.featuredIndex.set(0);
     } catch (error) {
       this.error.set(true);
-      this.sentry.captureError(error, { action: 'loadContenidoPublicadoUnexpected' });
+      if (!this.isTimeoutError(error)) {
+        this.sentry.captureError(error, { action: 'loadContenidoPublicadoUnexpected' });
+      }
     } finally {
       this.loading.set(false);
     }
@@ -775,17 +779,25 @@ export class NovedadesComponent implements OnInit {
       const { data, error } = await this.supabase.getCumpleanerosHoy();
       if (error) {
         this.cumpleanerosError.set(true);
-        this.sentry.captureError(error, { action: 'loadCumpleaneros' });
+        if (!this.isTimeoutError(error)) {
+          this.sentry.captureError(error, { action: 'loadCumpleaneros' });
+        }
         return;
       }
 
       this.cumpleaneros.set((data ?? []) as Cumpleanero[]);
     } catch (error) {
       this.cumpleanerosError.set(true);
-      this.sentry.captureError(error, { action: 'loadCumpleanerosUnexpected' });
+      if (!this.isTimeoutError(error)) {
+        this.sentry.captureError(error, { action: 'loadCumpleanerosUnexpected' });
+      }
     } finally {
       this.cumpleanerosLoading.set(false);
     }
+  }
+
+  private isTimeoutError(error: unknown): boolean {
+    return error instanceof Error && error.message.includes('timed out after');
   }
 
   rewardParticipantCount(reward: RewardCard) {

@@ -52,6 +52,7 @@ const providers: ApplicationConfig['providers'] = [
   importProvidersFrom(
     LucideAngularModule.pick({
       AlertTriangle: TriangleAlert,
+      TriangleAlert,
       Barbell: Dumbbell,
       Bolt: Zap,
       ChartBar,
