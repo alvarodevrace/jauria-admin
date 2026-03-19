@@ -125,7 +125,7 @@ interface ContenidoFormState {
           }
         </div>
       } @else {
-        <table class="data-table">
+        <table class="data-table editorial-table">
           <thead>
             <tr>
               <th>Contenido</th>
@@ -194,6 +194,86 @@ interface ContenidoFormState {
             }
           </tbody>
         </table>
+
+        <div class="editorial-mobile-list">
+          @for (item of filteredItems(); track item.id) {
+            <article class="editorial-mobile-card" [class.editorial-mobile-card--open]="isExpanded(item.id)">
+              <button
+                type="button"
+                class="editorial-mobile-card__summary"
+                (click)="toggleExpanded(item.id)"
+                [attr.aria-expanded]="isExpanded(item.id)"
+              >
+                <div class="editorial-mobile-card__summary-main">
+                  <img class="editorial-thumb editorial-thumb--mobile" [src]="imageUrl(item)" [alt]="item.titulo" />
+                  <div class="editorial-mobile-card__summary-copy">
+                    <strong>{{ item.titulo }}</strong>
+                    <span>{{ item.tipo }}</span>
+                  </div>
+                </div>
+                <i-lucide class="editorial-mobile-card__chevron" [name]="isExpanded(item.id) ? 'chevron-up' : 'chevron-down'" />
+              </button>
+
+              @if (isExpanded(item.id)) {
+                <div class="editorial-mobile-card__details">
+                  <div class="editorial-mobile-card__info-grid">
+                    <div class="editorial-mobile-card__info-item">
+                      <span class="editorial-mobile-card__info-label">Tipo</span>
+                      <span class="editorial-type-pill" [class.editorial-type-pill--evento]="item.tipo === 'evento'">
+                        {{ item.tipo }}
+                      </span>
+                    </div>
+                    <div class="editorial-mobile-card__info-item">
+                      <span class="editorial-mobile-card__info-label">Estado</span>
+                      <span class="badge" [class.badge--completado]="item.estado_publicacion === 'published'" [class.badge--pendiente]="item.estado_publicacion === 'draft'">
+                        {{ publicationLabel(item.estado_publicacion) }}
+                      </span>
+                    </div>
+                    <div class="editorial-mobile-card__info-item">
+                      <span class="editorial-mobile-card__info-label">Fecha</span>
+                      <strong>
+                        @if (item.tipo === 'evento' && item.evento_fecha_inicio) {
+                          {{ item.evento_fecha_inicio | dateEc: 'dd/MM/yyyy HH:mm' }}
+                        } @else {
+                          {{ item.published_at || item.created_at | dateEc: 'dd/MM/yyyy' }}
+                        }
+                      </strong>
+                    </div>
+                    <div class="editorial-mobile-card__info-item">
+                      <span class="editorial-mobile-card__info-label">Autor</span>
+                      <strong>{{ item.profiles?.nombre_completo ?? '—' }}</strong>
+                    </div>
+                  </div>
+
+                  <p class="editorial-mobile-card__desc">{{ excerpt(item.descripcion, 180) }}</p>
+
+                  <div class="editorial-mobile-card__actions">
+                    <button class="btn btn--ghost btn--sm btn--icon btn--icon-clean" (click)="previewItem(item)" title="Vista previa" aria-label="Vista previa">
+                      <i-lucide name="info-circle" />
+                    </button>
+                    <button class="btn btn--ghost btn--sm" (click)="openEditModal(item)">
+                      Editar
+                    </button>
+                    <button
+                      class="btn btn--secondary btn--sm"
+                      (click)="togglePublication(item)"
+                      [disabled]="actionLoadingId() === item.id"
+                    >
+                      {{ item.estado_publicacion === 'published' ? 'Pasar a borrador' : 'Publicar' }}
+                    </button>
+                    <button
+                      class="btn btn--danger btn--sm"
+                      (click)="deleteItem(item)"
+                      [disabled]="actionLoadingId() === item.id"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        </div>
       }
     </div>
 
@@ -327,6 +407,17 @@ interface ContenidoFormState {
     }
   `,
   styles: [`
+    .editorial-table {
+      display: table;
+    }
+
+    .editorial-mobile-list {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      padding: 18px;
+    }
+
     .editorial-toolbar,
     .editorial-actions {
       display: flex;
@@ -361,6 +452,11 @@ interface ContenidoFormState {
       object-fit: cover;
       background: #1d2022;
       flex-shrink: 0;
+    }
+
+    .editorial-thumb--mobile {
+      width: 60px;
+      height: 60px;
     }
 
     .editorial-content-cell__title {
@@ -440,6 +536,123 @@ interface ContenidoFormState {
       white-space: pre-wrap;
     }
 
+    .editorial-mobile-card {
+      border: 1px solid #2b3033;
+      border-radius: 18px;
+      background: rgba(21, 23, 24, 0.94);
+      overflow: hidden;
+    }
+
+    .editorial-mobile-card--open {
+      border-color: rgba(166, 31, 36, 0.5);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    }
+
+    .editorial-mobile-card__summary {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      text-align: left;
+    }
+
+    .editorial-mobile-card__summary-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .editorial-mobile-card__summary-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .editorial-mobile-card__summary-copy strong {
+      color: #f4f1eb;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .editorial-mobile-card__summary-copy span {
+      color: #938c84;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .editorial-mobile-card__chevron {
+      width: 18px;
+      height: 18px;
+      color: #938c84;
+      flex-shrink: 0;
+    }
+
+    .editorial-mobile-card__details {
+      border-top: 1px solid rgba(43, 48, 51, 0.9);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .editorial-mobile-card__info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .editorial-mobile-card__info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(244, 241, 235, 0.03);
+      border: 1px solid rgba(244, 241, 235, 0.06);
+      min-width: 0;
+    }
+
+    .editorial-mobile-card__info-label {
+      color: #938c84;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .editorial-mobile-card__info-item strong {
+      color: #f4f1eb;
+      font-size: 13px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .editorial-mobile-card__desc {
+      color: #d2cbc1;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .editorial-mobile-card__actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .editorial-mobile-card__actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
     @media (max-width: 900px) {
       .editorial-toolbar {
         width: 100%;
@@ -448,6 +661,22 @@ interface ContenidoFormState {
       .editorial-filter,
       .editorial-toolbar .search-input {
         width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .editorial-table {
+        display: none;
+      }
+
+      .editorial-mobile-list {
+        display: flex;
+        padding: 14px;
+      }
+
+      .editorial-mobile-card__info-grid,
+      .editorial-mobile-card__actions {
+        grid-template-columns: 1fr;
       }
     }
   `],
@@ -473,6 +702,7 @@ export class EventosNoticiasComponent implements OnInit {
   readonly imagePreview = signal<string | null>(null);
   readonly formError = signal('');
   readonly selectedFile = signal<File | null>(null);
+  readonly expandedItemId = signal<number | null>(null);
 
   readonly form = signal<ContenidoFormState>(this.emptyForm());
 
@@ -508,6 +738,14 @@ export class EventosNoticiasComponent implements OnInit {
 
   async ngOnInit() {
     await this.loadItems();
+  }
+
+  toggleExpanded(itemId: number) {
+    this.expandedItemId.update((current) => current === itemId ? null : itemId);
+  }
+
+  isExpanded(itemId: number) {
+    return this.expandedItemId() === itemId;
   }
 
   async loadItems() {
