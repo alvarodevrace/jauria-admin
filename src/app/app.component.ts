@@ -39,9 +39,7 @@ interface BeforeInstallPromptEvent extends Event {
             </button>
           } @else {
             <div class="install-instructions">
-              <p class="install-instructions-title">
-                {{ isIosDevice() ? 'Instala desde Safari' : 'Instala desde el navegador' }}
-              </p>
+              <p class="install-instructions-title">Instala desde el navegador</p>
               <p class="install-instructions-copy">
                 {{ installInstructions() }}
               </p>
@@ -227,8 +225,6 @@ export class AppComponent implements OnInit {
   protected readonly appBusy = inject(AppBusyService);
 
   protected readonly canPromptInstall = signal(false);
-  protected readonly isIosDevice = signal(false);
-
   private readonly isStandalone = signal(false);
   private readonly isMobileBrowser = signal(false);
   protected readonly shouldBlockMobileBrowser = computed(
@@ -249,8 +245,8 @@ export class AppComponent implements OnInit {
   }
 
   protected installInstructions = computed(() => {
-    if (this.isIosDevice()) {
-      return 'Toca Compartir en Safari y luego "Agregar a pantalla de inicio".';
+    if (this.isIosLikeBrowser()) {
+      return 'Abre el menu Compartir del navegador y luego toca "Agregar a pantalla de inicio".';
     }
 
     return 'Abre el menu del navegador y selecciona "Instalar aplicacion" o "Agregar a pantalla de inicio".';
@@ -276,7 +272,6 @@ export class AppComponent implements OnInit {
     const mobileByUa = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
     const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
-    this.isIosDevice.set(/iPhone|iPad|iPod/i.test(userAgent));
     this.isStandalone.set(
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true,
@@ -296,4 +291,9 @@ export class AppComponent implements OnInit {
     this.canPromptInstall.set(false);
     this.refreshClientMode();
   };
+
+  private isIosLikeBrowser(): boolean {
+    const userAgent = navigator.userAgent ?? '';
+    return /iPhone|iPad|iPod/i.test(userAgent);
+  }
 }
