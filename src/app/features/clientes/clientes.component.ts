@@ -309,7 +309,7 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
             } @else if (historial().length === 0) {
               <div style="text-align:center;padding:40px;color:#938C84;">Sin pagos registrados.</div>
             } @else {
-              <table class="data-table">
+              <table class="data-table historial-table">
                 <thead>
                   <tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Banco</th><th>Estado</th></tr>
                 </thead>
@@ -325,6 +325,51 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
                   }
                 </tbody>
               </table>
+
+              <div class="historial-mobile-list">
+                @for (p of historial(); track p.id) {
+                  <article class="historial-mobile-card" [class.historial-mobile-card--open]="isHistorialPagoExpanded(p.id)">
+                    <button
+                      type="button"
+                      class="historial-mobile-card__summary"
+                      (click)="toggleExpandedHistorialPago(p.id)"
+                      [attr.aria-expanded]="isHistorialPagoExpanded(p.id)"
+                    >
+                      <div class="historial-mobile-card__summary-copy">
+                        <strong>{{ p.fecha_pago | dateEc }}</strong>
+                      </div>
+                      <i-lucide class="historial-mobile-card__chevron" [name]="isHistorialPagoExpanded(p.id) ? 'chevron-up' : 'chevron-down'" />
+                    </button>
+
+                    @if (isHistorialPagoExpanded(p.id)) {
+                      <div class="historial-mobile-card__details">
+                        <div class="historial-mobile-card__info-grid">
+                          <div class="historial-mobile-card__info-item">
+                            <span class="historial-mobile-card__info-label">Fecha</span>
+                            <strong>{{ p.fecha_pago | dateEc }}</strong>
+                          </div>
+                          <div class="historial-mobile-card__info-item">
+                            <span class="historial-mobile-card__info-label">Monto</span>
+                            <strong class="historial-mobile-card__amount">$ {{ p.monto }}</strong>
+                          </div>
+                          <div class="historial-mobile-card__info-item">
+                            <span class="historial-mobile-card__info-label">Método</span>
+                            <span class="badge badge--mensual">{{ p.metodo }}</span>
+                          </div>
+                          <div class="historial-mobile-card__info-item">
+                            <span class="historial-mobile-card__info-label">Banco</span>
+                            <strong>{{ p.banco || '—' }}</strong>
+                          </div>
+                          <div class="historial-mobile-card__info-item">
+                            <span class="historial-mobile-card__info-label">Estado</span>
+                            <span class="badge badge--{{ p.estado.toLowerCase() }}">{{ p.estado }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
             }
           </div>
         </div>
@@ -451,6 +496,89 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       padding: 8px 10px;
     }
 
+    .historial-mobile-list {
+      display: none;
+    }
+
+    .historial-mobile-card {
+      border: 1px solid #2b3033;
+      border-radius: 16px;
+      background: rgba(21, 23, 24, 0.94);
+      overflow: hidden;
+    }
+
+    .historial-mobile-card--open {
+      border-color: rgba(166, 31, 36, 0.5);
+    }
+
+    .historial-mobile-card__summary {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      text-align: left;
+    }
+
+    .historial-mobile-card__summary-copy strong {
+      color: #f4f1eb;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .historial-mobile-card__chevron {
+      width: 18px;
+      height: 18px;
+      color: #938c84;
+      flex-shrink: 0;
+    }
+
+    .historial-mobile-card__details {
+      border-top: 1px solid rgba(43, 48, 51, 0.9);
+      padding: 12px;
+    }
+
+    .historial-mobile-card__info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .historial-mobile-card__info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(244, 241, 235, 0.03);
+      border: 1px solid rgba(244, 241, 235, 0.06);
+      min-width: 0;
+    }
+
+    .historial-mobile-card__info-label {
+      color: #938c84;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .historial-mobile-card__info-item strong {
+      color: #f4f1eb;
+      font-size: 13px;
+      line-height: 1.3;
+      min-width: 0;
+    }
+
+    .historial-mobile-card__amount {
+      color: #3D8B6D;
+    }
+
     @media (max-width: 900px) and (min-width: 641px) {
       .clientes-accordion {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -490,6 +618,16 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       .cliente-card__actions {
         grid-template-columns: 1fr;
       }
+
+      .historial-table {
+        display: none;
+      }
+
+      .historial-mobile-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
     }
   `],
 })
@@ -523,6 +661,7 @@ export class ClientesComponent implements OnInit {
   historialClienteId = signal('');
   historial = signal<Pago[]>([]);
   historialLoading = signal(false);
+  expandedHistorialPagoId = signal<number | null>(null);
   private reminderQueue = new Map<string, Promise<void>>();
 
   async ngOnInit() {
@@ -765,6 +904,7 @@ export class ClientesComponent implements OnInit {
 
   async verHistorial(idCliente: string) {
     this.historialClienteId.set(idCliente);
+    this.expandedHistorialPagoId.set(null);
     this.historialLoading.set(true);
     try {
       const { data, error } = await this.supabase.getHistorialPagos({ id_cliente: idCliente });
@@ -780,6 +920,14 @@ export class ClientesComponent implements OnInit {
     } finally {
       this.historialLoading.set(false);
     }
+  }
+
+  toggleExpandedHistorialPago(idPago: number) {
+    this.expandedHistorialPagoId.update((current) => current === idPago ? null : idPago);
+  }
+
+  isHistorialPagoExpanded(idPago: number) {
+    return this.expandedHistorialPagoId() === idPago;
   }
 
   private nextEstadoCliente(cliente: Cliente) {

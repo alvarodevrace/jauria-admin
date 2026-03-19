@@ -71,6 +71,18 @@ export class PwaUpdateService {
       return;
     }
 
+    if (this.isStandalone()) {
+      this.toast.info('Actualizando app...');
+      setTimeout(async () => {
+        try {
+          await this.updates.activateUpdate();
+        } finally {
+          window.location.reload();
+        }
+      }, 600);
+      return;
+    }
+
     this.promptOpen = true;
 
     try {
@@ -95,5 +107,10 @@ export class PwaUpdateService {
     } finally {
       this.promptOpen = false;
     }
+  }
+
+  private isStandalone(): boolean {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   }
 }

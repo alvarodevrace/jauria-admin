@@ -49,7 +49,7 @@ const providers: ApplicationConfig['providers'] = [
   provideAnimations(),
   provideServiceWorker('ngsw-worker.js', {
     enabled: environment.production,
-    registrationStrategy: 'registerWhenStable:5000',
+    registrationStrategy: 'registerImmediately',
   }),
   importProvidersFrom(
     LucideAngularModule.pick({
