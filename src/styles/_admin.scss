@@ -774,9 +774,10 @@ i-lucide,
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px);
   overflow-y: auto;
   animation: fadeIn 0.2s ease;
+  box-sizing: border-box;
 }
 
 .modal {
@@ -785,9 +786,10 @@ i-lucide,
   border-radius: 16px;
   width: 100%;
   max-width: 480px;
-  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px);
   overflow: auto;
   animation: scaleIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  overscroll-behavior: contain;
 
   &__header {
     padding: 24px 24px 0;
@@ -1231,11 +1233,12 @@ i-lucide,
 
   .modal-backdrop {
     align-items: flex-start;
-    padding: 12px;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .modal {
-    max-height: calc(100vh - 24px);
+    width: min(100%, calc(100dvw - 24px));
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
   }
 
   .modal__header,
@@ -1330,6 +1333,33 @@ i-lucide,
 
   .main-content__inner {
     padding: 18px 12px 28px;
+  }
+
+  .modal-backdrop {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  }
+
+  .modal {
+    width: min(100%, calc(100dvw - 20px));
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px);
+    border-radius: 14px;
+  }
+
+  .modal__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: v.$color-surface;
+    padding-top: 14px;
+  }
+
+  .modal__footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: v.$color-surface;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
   }
 
   .sidebar {

@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit, computed, inject, signal } from '@angu
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
 import { AppBusyService } from './core/services/app-busy.service';
+import { PwaUpdateService } from './core/services/pwa-update.service';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -223,6 +224,7 @@ interface BeforeInstallPromptEvent extends Event {
 export class AppComponent implements OnInit {
   protected readonly auth = inject(AuthService);
   protected readonly appBusy = inject(AppBusyService);
+  protected readonly pwaUpdate = inject(PwaUpdateService);
 
   protected readonly canPromptInstall = signal(false);
   private readonly isStandalone = signal(false);
