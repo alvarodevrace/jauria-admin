@@ -14,6 +14,6 @@ RUN touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/cache/nginx /var/run/nginx.pid /usr/share/nginx/html
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=2 \
-  CMD wget -qO- http://localhost:8080/index.html || exit 1
+  CMD wget -qO- http://127.0.0.1:8080/index.html || exit 1
 USER nginx
 CMD ["nginx", "-g", "daemon off;"]
