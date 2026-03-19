@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import {
@@ -49,14 +49,6 @@ interface Cumpleanero {
   standalone: true,
   imports: [CommonModule, LucideAngularModule, DateEcPipe],
   template: `
-    <div class="page-header">
-      <span class="page-header__eyebrow">Comunidad</span>
-      <h2 class="page-header__title">Novedades</h2>
-      <p class="page-header__subtitle">
-        Noticias del box, eventos y anuncios del coach visibles para toda la comunidad.
-      </p>
-    </div>
-
     <section class="cumpleanos-section">
       <div class="cumpleanos-section__header">
         <span class="novedades-section-label">Hoy celebramos</span>
@@ -73,15 +65,10 @@ interface Cumpleanero {
         <div class="cumpleanos-grid">
           @for (cumple of cumpleaneros(); track cumple.id_cliente) {
             <article class="cumpleanos-card">
-              <div class="cumpleanos-card__emoji" aria-label="Cumpleaños">🎉</div>
+              <div class="cumpleanos-card__emoji" aria-label="Cumpleaños">🎂</div>
               <div class="cumpleanos-card__meta">
                 <strong>{{ cumple.nombre_completo }}</strong>
                 <span>{{ cumple.fecha_nacimiento | dateEc: 'dd MMMM' }}</span>
-              </div>
-              <div class="cumpleanos-card__info">
-                <span>ID {{ cumple.id_cliente }}</span>
-                <span>{{ cumple.email }}</span>
-                <span>{{ cumple.telefono_whatsapp }}</span>
               </div>
             </article>
           }
@@ -136,22 +123,13 @@ interface Cumpleanero {
           <span class="novedades-section-label">Actualizado</span>
           <h3 class="novedades-section-title">Lo último del box</h3>
         </div>
-        @if (items().length > 1) {
-          <div class="novedades-featured__actions">
-            <button class="btn btn--ghost btn--sm btn--icon" (click)="prevFeatured()" aria-label="Anterior">
-              <i-lucide name="chevron-left" />
-            </button>
-            <button class="btn btn--ghost btn--sm btn--icon" (click)="nextFeatured()" aria-label="Siguiente">
-              <i-lucide name="chevron-right" />
-            </button>
-          </div>
-        }
       </div>
 
       <div class="novedades-horizontal-wrap">
         <div
+          #featuredTrack
           class="novedades-horizontal-track"
-          [style.transform]="'translateX(-' + (featuredIndex() * slideOffset()) + 'px)'"
+          (scroll)="onFeaturedScroll()"
         >
           @for (item of items(); track item.id) {
             <article class="novedades-card novedades-card--horizontal" (click)="openDetail(item)">
@@ -184,7 +162,7 @@ interface Cumpleanero {
             <button
               class="novedades-carousel__dot"
               [class.active]="featuredIndex() === i"
-              (click)="featuredIndex.set(i)"
+              (click)="goToFeatured(i)"
               [attr.aria-label]="'Ir a la novedad ' + (i + 1)"
             ></button>
           }
@@ -312,10 +290,16 @@ interface Cumpleanero {
 
     .novedades-feed {
       margin-bottom: 32px;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .novedades-premios {
       margin-bottom: 28px;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .novedades-premios__grid {
@@ -413,27 +397,38 @@ interface Cumpleanero {
 
     .cumpleanos-section {
       margin-bottom: 30px;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .cumpleanos-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
       margin-top: 12px;
     }
 
     .cumpleanos-card {
-      border-radius: 18px;
+      border-radius: 16px;
       background: rgba(21, 23, 24, 0.9);
-      padding: 16px;
+      padding: 14px;
       border: 1px solid #2b3033;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr);
       gap: 10px;
+      align-items: center;
     }
 
     .cumpleanos-card__emoji {
-      font-size: 28px;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 22px;
+      background: rgba(166, 31, 36, 0.14);
     }
 
     .cumpleanos-card__meta {
@@ -444,22 +439,13 @@ interface Cumpleanero {
     }
 
     .cumpleanos-card__meta strong {
-      font-size: 18px;
+      font-size: 15px;
       line-height: 1.1;
     }
 
     .cumpleanos-card__meta span {
-      font-size: 12px;
+      font-size: 11px;
       color: #938c84;
-    }
-
-    .cumpleanos-card__info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 13px;
-      color: #d2cbc1;
-      line-height: 1.4;
     }
 
     .cumpleanos-empty {
@@ -468,22 +454,31 @@ interface Cumpleanero {
       font-size: 14px;
     }
 
-    .novedades-featured__actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
     .novedades-horizontal-wrap {
-      overflow: hidden;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
       border-radius: 20px;
+      overflow: hidden;
     }
 
     .novedades-horizontal-track {
       display: flex;
       gap: 18px;
-      transition: transform 0.32s ease;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+
+    .novedades-horizontal-track::-webkit-scrollbar {
+      display: none;
     }
 
     .novedades-carousel__dots {
@@ -576,8 +571,11 @@ interface Cumpleanero {
     }
 
     .novedades-card--horizontal {
+      width: calc(50% - 9px);
       min-width: calc(50% - 9px);
       max-width: calc(50% - 9px);
+      flex: 0 0 calc(50% - 9px);
+      scroll-snap-align: start;
     }
 
     .novedades-card__image {
@@ -654,6 +652,10 @@ interface Cumpleanero {
     }
 
     @media (max-width: 768px) {
+      .cumpleanos-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .novedades-modal__event-grid {
         grid-template-columns: 1fr;
       }
@@ -663,20 +665,30 @@ interface Cumpleanero {
       }
 
       .novedades-card--horizontal {
+        width: calc(100% - 8px);
         min-width: calc(100% - 8px);
         max-width: calc(100% - 8px);
+        flex-basis: calc(100% - 8px);
       }
     }
 
     @media (min-width: 769px) and (max-width: 1100px) {
       .novedades-card--horizontal {
+        width: calc(50% - 9px);
         min-width: calc(50% - 9px);
         max-width: calc(50% - 9px);
       }
     }
 
+    @media (max-width: 420px) {
+      .cumpleanos-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     @media (min-width: 1101px) {
       .novedades-card--horizontal {
+        width: calc(50% - 9px);
         min-width: calc(50% - 9px);
         max-width: calc(50% - 9px);
       }
@@ -684,6 +696,8 @@ interface Cumpleanero {
   `],
 })
 export class NovedadesComponent implements OnInit {
+  @ViewChild('featuredTrack') featuredTrack?: ElementRef<HTMLDivElement>;
+
   private supabase = inject(SupabaseService);
   private sentry = inject(SentryService);
 
@@ -891,22 +905,34 @@ export class NovedadesComponent implements OnInit {
     this.selectedItem.set(item);
   }
 
-  slideOffset() {
-    if (typeof window === 'undefined') return 0;
-    if (window.innerWidth <= 768) return window.innerWidth - 32 + 18;
-    return Math.floor((window.innerWidth - 64) / 2) + 9;
+  goToFeatured(index: number) {
+    this.featuredIndex.set(index);
+
+    const track = this.featuredTrack?.nativeElement;
+    const target = track?.children.item(index) as HTMLElement | null;
+    if (!track || !target) return;
+
+    track.scrollTo({
+      left: target.offsetLeft,
+      behavior: 'smooth',
+    });
   }
 
-  prevFeatured() {
-    const total = this.items().length;
-    if (total <= 1) return;
-    this.featuredIndex.update((current) => (current - 1 + total) % total);
-  }
+  onFeaturedScroll() {
+    const track = this.featuredTrack?.nativeElement;
+    if (!track) return;
 
-  nextFeatured() {
-    const total = this.items().length;
-    if (total <= 1) return;
-    this.featuredIndex.update((current) => (current + 1) % total);
+    const children = Array.from(track.children) as HTMLElement[];
+    if (!children.length) return;
+
+    const currentIndex = children.reduce((closestIndex, child, index) => {
+      const closest = children[closestIndex];
+      return Math.abs(child.offsetLeft - track.scrollLeft) < Math.abs(closest.offsetLeft - track.scrollLeft)
+        ? index
+        : closestIndex;
+    }, 0);
+
+    this.featuredIndex.set(currentIndex);
   }
 
   excerpt(text: string, max = 120) {

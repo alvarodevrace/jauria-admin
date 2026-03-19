@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../core/services/supabase.service';
@@ -169,16 +169,22 @@ const CLASE_THEME = {
     <!-- Toolbar -->
     <div class="toolbar-row clases-toolbar">
       <div class="clases-toolbar__nav">
-        <button class="btn btn--ghost btn--sm" (click)="semanaAnterior()" [disabled]="!puedeIrSemanaAnterior()">
-          ‹
-        </button>
-        <span class="week-toolbar__label">
-          {{ semanaLabel() }}
-        </span>
-        <button class="btn btn--ghost btn--sm" (click)="semanaSiguiente()">
-          ›
-        </button>
-        <button class="btn btn--ghost btn--sm" (click)="irHoy()">Hoy</button>
+        <div class="clases-toolbar__period">
+          <span class="clases-toolbar__period-label">Semana visible</span>
+          <span class="week-toolbar__label">
+            {{ semanaLabel() }}
+          </span>
+        </div>
+
+        <div class="clases-toolbar__nav-controls">
+          <button class="btn btn--ghost btn--sm clases-toolbar__nav-btn" (click)="semanaAnterior()" [disabled]="!puedeIrSemanaAnterior()" aria-label="Semana anterior">
+            ‹
+          </button>
+          <button class="btn btn--ghost btn--sm clases-toolbar__today-btn" (click)="irHoy()">Hoy</button>
+          <button class="btn btn--ghost btn--sm clases-toolbar__nav-btn" (click)="semanaSiguiente()" aria-label="Semana siguiente">
+            ›
+          </button>
+        </div>
       </div>
       <div class="clases-toolbar__actions">
         <div class="clases-view-toggle">
@@ -207,7 +213,7 @@ const CLASE_THEME = {
 
     <!-- ══ VISTA SEMANA ══════════════════════════════════════════════════════ -->
     @if (vista() === 'semana') {
-      <div class="week-calendar">
+      <div #weekCalendar class="week-calendar">
         <!-- Cabecera días -->
         <div class="week-calendar__header">
           @for (dia of diasSemana(); track dia.fecha) {
@@ -810,26 +816,64 @@ const CLASE_THEME = {
       }
       .clases-toolbar {
         margin-bottom: 20px;
+        width: 100%;
+        max-width: 100%;
       }
+      .clases-toolbar,
       .clases-toolbar__nav,
       .clases-toolbar__actions {
         display: flex;
         align-items: center;
       }
+      .clases-toolbar {
+        gap: 14px;
+      }
       .clases-toolbar__nav {
         gap: 12px;
+        flex: 1;
+        min-width: 0;
       }
       .clases-toolbar__actions {
         gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .clases-toolbar__period {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 4px;
+      }
+      .clases-toolbar__period-label {
+        color: #938c84;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .clases-toolbar__nav-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+      .clases-toolbar__nav-btn {
+        min-width: 40px;
+        padding-inline: 0;
+      }
+      .clases-toolbar__today-btn {
+        min-width: 64px;
       }
       .clases-view-toggle {
         display: flex;
         overflow: hidden;
         border: 1px solid #2b3033;
         border-radius: 8px;
+        background: rgba(21, 23, 24, 0.95);
       }
       .clases-view-toggle__button {
         border-radius: 0;
+        min-width: 88px;
       }
       .clases-filter-select {
         width: auto;
@@ -1029,14 +1073,20 @@ const CLASE_THEME = {
         background: #151718;
         border: 1px solid #2b3033;
         border-radius: 12px;
+        width: 100%;
+        max-width: 100%;
         overflow: hidden;
         overflow-x: auto;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
       }
       .week-toolbar__label {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 16px;
+        font-size: 18px;
         letter-spacing: 0.05em;
         color: #f4f1eb;
+        line-height: 1;
+        text-wrap: balance;
       }
       .class-type-pill {
         display: inline-flex;
@@ -1238,6 +1288,57 @@ const CLASE_THEME = {
         gap: 8px;
       }
       @media (max-width: 900px) {
+        .clases-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .clases-toolbar__nav,
+        .clases-toolbar__actions {
+          width: 100%;
+        }
+        .clases-toolbar__nav {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+          padding: 14px;
+          border: 1px solid rgba(244, 241, 235, 0.08);
+          border-radius: 18px;
+          background: rgba(21, 23, 24, 0.82);
+        }
+        .clases-toolbar__period {
+          align-items: center;
+          text-align: center;
+        }
+        .clases-toolbar__nav-controls {
+          display: grid;
+          grid-template-columns: 48px minmax(0, 1fr) 48px;
+          width: 100%;
+        }
+        .clases-toolbar__nav-btn,
+        .clases-toolbar__today-btn {
+          min-width: 0;
+          width: 100%;
+        }
+        .clases-toolbar__actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .clases-view-toggle {
+          width: 100%;
+          border-radius: 16px;
+          padding: 4px;
+          gap: 4px;
+          overflow: visible;
+        }
+        .clases-view-toggle__button {
+          flex: 1 1 0;
+          min-width: 0;
+          border-radius: 12px;
+        }
+        .clases-toolbar__actions > .btn {
+          width: 100%;
+          justify-content: center;
+        }
         .clases-athlete-summary {
           grid-template-columns: 1fr;
         }
@@ -1262,10 +1363,27 @@ const CLASE_THEME = {
           grid-template-columns: 1fr;
         }
       }
+      @media (max-width: 640px) {
+        .week-toolbar__label {
+          font-size: 22px;
+        }
+        .clases-toolbar__period-label {
+          font-size: 10px;
+        }
+        .clases-toolbar__nav {
+          padding: 12px;
+          border-radius: 16px;
+        }
+        .clases-view-toggle {
+          border-radius: 14px;
+        }
+      }
     `,
   ],
 })
-export class ClasesComponent implements OnInit {
+export class ClasesComponent implements OnInit, AfterViewInit {
+  @ViewChild('weekCalendar') weekCalendar?: ElementRef<HTMLDivElement>;
+
   auth = inject(AuthService);
   private supabase = inject(SupabaseService);
   private confirmDialog = inject(ConfirmDialogService);
@@ -1363,6 +1481,10 @@ export class ClasesComponent implements OnInit {
     ]);
   }
 
+  ngAfterViewInit() {
+    this.scrollWeekCalendarToToday();
+  }
+
   /** Verifica si el atleta logueado tiene membresía activa.
    *  Coach y admin siempre pueden inscribirse (gestionan el gym). */
   async verificarMembresia() {
@@ -1442,6 +1564,7 @@ export class ClasesComponent implements OnInit {
       this.toast.error('No se pudieron cargar las clases');
     } finally {
       this.loading.set(false);
+      this.scrollWeekCalendarToToday();
     }
   }
 
@@ -2050,5 +2173,31 @@ export class ClasesComponent implements OnInit {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
+  }
+
+  private scrollWeekCalendarToToday() {
+    if (typeof window === 'undefined' || window.innerWidth > 900 || this.vista() !== 'semana') {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const calendar = this.weekCalendar?.nativeElement;
+      if (!calendar) return;
+
+      const todayIndex = this.diasSemana().findIndex((dia) => dia.esHoy);
+      if (todayIndex <= 0) {
+        calendar.scrollTo({ left: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const header = calendar.querySelector('.week-calendar__header') as HTMLElement | null;
+      const todayHeader = header?.children.item(todayIndex) as HTMLElement | null;
+      if (!todayHeader) return;
+
+      calendar.scrollTo({
+        left: Math.max(todayHeader.offsetLeft - 8, 0),
+        behavior: 'smooth',
+      });
+    });
   }
 }

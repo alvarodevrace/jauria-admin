@@ -10,8 +10,11 @@ $topbar-height: 64px;
 .admin-shell {
   display: flex;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   background: v.$color-bg;
   color: v.$color-white;
+  overflow-x: clip;
 }
 
 // =============================================
@@ -205,9 +208,22 @@ $topbar-height: 64px;
   padding-top: $topbar-height;
   flex: 1;
   min-height: 100vh;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 
   &__inner {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     padding: 32px;
+    overflow-x: clip;
+  }
+
+  &__inner > * {
+    min-width: 0;
+    max-width: 100%;
   }
 }
 
@@ -301,6 +317,8 @@ $topbar-height: 64px;
   background: v.$color-surface;
   border: 1px solid v.$color-border;
   border-radius: 12px;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -996,6 +1014,25 @@ i-lucide,
   flex-wrap: wrap;
 }
 
+.filters-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.filters-panel {
+  width: 100%;
+  display: none;
+  padding: 16px 24px 20px;
+  border-bottom: 1px solid rgba(v.$color-border, 0.75);
+  background: rgba(v.$color-surface2, 0.5);
+}
+
+.filters-panel--open {
+  display: block;
+}
+
 .two-column-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1174,7 +1211,7 @@ i-lucide,
   }
 
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
 
@@ -1187,7 +1224,7 @@ i-lucide,
   }
 
   .main-content__inner {
-    padding: 20px 16px 32px;
+    padding: 20px 14px 32px;
   }
 
   .modal-backdrop {
@@ -1284,6 +1321,9 @@ i-lucide,
     }
 
     tbody {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
       padding: 8px;
     }
 
@@ -1291,8 +1331,9 @@ i-lucide,
       border: 1px solid v.$color-border;
       border-radius: 12px;
       background: rgba(v.$color-surface2, 0.55);
-      margin-bottom: 12px;
       overflow: hidden;
+      margin-bottom: 0;
+      height: 100%;
     }
 
     tr:last-child {

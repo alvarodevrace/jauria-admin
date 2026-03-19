@@ -2,8 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, ElementRef, ViewChild, Af
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import { SupabaseService } from '../../core/services/supabase.service';
-import { AdminOpsService } from '../../core/services/admin-ops.service';
+import { AdminOpsService, DashboardSummary } from '../../core/services/admin-ops.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { WhatsappStatusWidgetComponent } from './whatsapp-status-widget/whatsapp-status-widget.component';
@@ -91,9 +90,11 @@ const BRAND_CHART = {
     </div>
 
     <div class="bottom-grid dashboard-grid" [class.dashboard-grid--single]="!auth.canViewTechnicalDashboard()">
-      <div class="data-table-wrapper whatsapp-widget-column">
-        <app-whatsapp-status-widget></app-whatsapp-status-widget>
-      </div>
+      @if (auth.canViewWhatsappOperations()) {
+        <div class="data-table-wrapper whatsapp-widget-column">
+          <app-whatsapp-status-widget></app-whatsapp-status-widget>
+        </div>
+      }
       @if (auth.canViewTechnicalDashboard()) {
         <div class="data-table-wrapper">
           <div class="data-table-wrapper__header">
@@ -231,7 +232,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('barChart')   barChartEl!: ElementRef<HTMLCanvasElement>;
   @ViewChild('donutChart') donutChartEl!: ElementRef<HTMLCanvasElement>;
 
-  private supabase = inject(SupabaseService);
   private adminOps = inject(AdminOpsService);
   private toast    = inject(ToastService);
   private router   = inject(Router);
@@ -257,100 +257,81 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async loadData() {
-    const [clientes, pagos, convs, leads] = await Promise.all([
-      this.supabase.getClientes(),
-      this.supabase.getHistorialPagos(),
-      this.auth.canViewTechnicalDashboard() ? this.supabase.getConversacionesActivas() : Promise.resolve({ data: [], error: null }),
-      this.auth.canViewLeadInbox() ? this.supabase.getLeads() : Promise.resolve({ data: [], error: null }),
-    ]);
+    this.adminOps.getDashboardSummary().subscribe({
+      next: (summary) => {
+        this.applySummary(summary);
+      },
+      error: () => {
+        this.toast.error('No se pudo cargar el dashboard');
+      },
+    });
+  }
 
-    const cd = (clientes.data ?? []) as Record<string, unknown>[];
-    const pd = (pagos.data ?? []) as Record<string, unknown>[];
-    const cvd = (convs.data ?? []) as Record<string, unknown>[];
-    const ld = (leads.data ?? []) as Record<string, unknown>[];
-
-    const activos = cd.filter(c => c['estado'] === 'Activo').length;
-    const vencidos = cd.filter(c => c['estado'] === 'Vencido').length;
-    const total = cd.length;
-    const tasaPago = total ? Math.round(activos / total * 100) : 0;
-    const totalCobrado = pd.reduce((s, p) => s + Number(p['monto'] ?? 0), 0);
-    const pendingPayments = pd.filter((p) => this.paymentStatusBadge(String(p['estado'] ?? '')) !== 'completado');
-    const pagosPendientes = pendingPayments.length;
-    const nextPendingPayment = pendingPayments[0] ?? null;
-    const nestedClientName = nextPendingPayment?.['clientes'] && typeof nextPendingPayment['clientes'] === 'object'
-      ? String((nextPendingPayment['clientes'] as Record<string, unknown>)['nombre_completo'] ?? '')
-      : '';
-    const pendingClientName = String(nextPendingPayment?.['nombre_cliente'] ?? nestedClientName).trim();
-    const pendingClientId = String(nextPendingPayment?.['id_cliente'] ?? '').trim();
-
+  private applySummary(summary: DashboardSummary) {
     const kpis: KPI[] = [
-      { label: 'Clientes Activos', value: activos, trend: `${total} total`, trendUp: true },
-      { label: 'Total Cobrado', value: `$${totalCobrado.toFixed(0)}`, trend: `${pd.length} pagos`, trendUp: true },
-      { label: 'Tasa de Pago', value: `${tasaPago}%`, trend: tasaPago >= 70 ? 'Saludable' : 'Revisar', trendUp: tasaPago >= 70 },
+      {
+        label: 'Clientes Activos',
+        value: summary.kpis.activos,
+        trend: `${summary.kpis.totalClientes} total`,
+        trendUp: true,
+      },
+      {
+        label: 'Total Cobrado',
+        value: `$${summary.kpis.totalCobrado.toFixed(0)}`,
+        trend: `${summary.charts.revenueByMonth.length} meses analizados`,
+        trendUp: true,
+      },
+      {
+        label: 'Tasa de Pago',
+        value: `${summary.kpis.tasaPago}%`,
+        trend: summary.kpis.tasaPago >= 70 ? 'Saludable' : 'Revisar',
+        trendUp: summary.kpis.tasaPago >= 70,
+      },
       {
         label: 'Pagos Pendientes',
-        value: pagosPendientes,
-        trend: pagosPendientes === 0 ? 'Al día' : undefined,
-        trendUp: pagosPendientes === 0,
-        actionLabel: pagosPendientes > 0 ? 'Revisar cobro' : undefined,
-        actionHint: pagosPendientes > 0
-          ? `${pendingClientName || 'Cliente pendiente'}${pendingClientId ? ` · ${pendingClientId}` : ''}`
+        value: summary.kpis.pagosPendientes,
+        trend: summary.kpis.pagosPendientes === 0 ? 'Al día' : undefined,
+        trendUp: summary.kpis.pagosPendientes === 0,
+        actionLabel: summary.kpis.pagosPendientes > 0 ? 'Revisar cobro' : undefined,
+        actionHint: summary.kpis.pagosPendientes > 0
+          ? `${summary.kpis.pendingClientName || 'Cliente pendiente'}${summary.kpis.pendingClientId ? ` · ${summary.kpis.pendingClientId}` : ''}`
           : undefined,
       },
-      { label: 'Clientes Vencidos', value: vencidos, trend: vencidos === 0 ? 'Sin alertas' : 'Seguimiento requerido', trendUp: vencidos === 0 },
+      {
+        label: 'Clientes Vencidos',
+        value: summary.kpis.vencidos,
+        trend: summary.kpis.vencidos === 0 ? 'Sin alertas' : 'Seguimiento requerido',
+        trendUp: summary.kpis.vencidos === 0,
+      },
     ];
 
     if (this.auth.canViewLeadInbox()) {
-      kpis.push({ label: 'Leads Landing', value: ld.length });
+      kpis.push({ label: 'Leads Landing', value: summary.kpis.leads });
     }
 
     this.kpis.set(kpis);
+    this.alertas.set(summary.alerts);
 
-    // Alertas
-    const alerts: Alerta[] = [];
-    if (vencidos > 0) alerts.push({ tipo: 'warning', titulo: 'Clientes Vencidos', msg: `${vencidos} con membresía vencida` });
-    if (pagosPendientes > 0) alerts.push({ tipo: 'info', titulo: 'Pagos Pendientes', msg: `${pagosPendientes} pago(s) requieren revisión` });
-    if (this.auth.canViewTechnicalDashboard() && cvd.length > 0) {
-      alerts.push({ tipo: 'info', titulo: 'Conversaciones WA', msg: `${cvd.length} conversación(es) esperando respuesta` });
-    }
-    this.alertas.set(alerts);
-
-    // Charts después del DOM
     if (this.chartsInitTimeoutId) clearTimeout(this.chartsInitTimeoutId);
-    this.chartsInitTimeoutId = setTimeout(() => this.initCharts(pd, cd), 100);
+    this.chartsInitTimeoutId = setTimeout(() => this.initCharts(summary), 100);
   }
 
-  private initCharts(pagos: Record<string, unknown>[], clientes: Record<string, unknown>[]) {
-    this.buildBarChart(pagos);
-    this.buildDonutChart(clientes);
+  private initCharts(summary: DashboardSummary) {
+    this.buildBarChart(summary.charts.revenueByMonth);
+    this.buildDonutChart(summary.charts.planDistribution);
   }
 
-  private buildBarChart(pagos: Record<string, unknown>[]) {
+  private buildBarChart(revenueByMonth: Array<{ label: string; total: number }>) {
     if (!this.barChartEl) return;
     this.barChartInstance?.destroy();
-
-    // Agrupar por mes (últimos 6)
-    const months: string[] = [];
-    const totals: number[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const label = d.toLocaleString('es', { month: 'short', year: '2-digit' });
-      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const total = pagos
-        .filter(p => String(p['fecha_pago'] ?? '').startsWith(ym))
-        .reduce((s, p) => s + Number(p['monto'] ?? 0), 0);
-      months.push(label);
-      totals.push(total);
-    }
 
     const cfg: ChartConfiguration = {
       type: 'bar',
       data: {
-        labels: months,
+        labels: revenueByMonth.map((point) => point.label),
         datasets: [{
           label: 'USD cobrados',
-          data: totals,
+          data: revenueByMonth.map((point) => point.total),
           backgroundColor: BRAND_CHART.primaryFill,
           borderColor: BRAND_CHART.primaryBorder,
           borderWidth: 1,
@@ -379,24 +360,21 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.barChartInstance = new Chart(this.barChartEl.nativeElement, cfg);
   }
 
-  private buildDonutChart(clientes: Record<string, unknown>[]) {
+  private buildDonutChart(planDistribution: Array<{ label: string; value: number }>) {
     if (!this.donutChartEl) return;
     this.donutChartInstance?.destroy();
-
-    const planes = ['MENSUAL', 'TRIMESTRAL', 'ANUAL'];
-    const counts = planes.map(p => clientes.filter(c => c['plan'] === p).length);
 
     const cfg: ChartConfiguration = {
       type: 'doughnut',
       data: {
-        labels: ['Mensual', 'Trimestral', 'Anual'],
+        labels: planDistribution.map((point) => point.label),
         datasets: [{
-          data: counts,
-          backgroundColor: [
-            BRAND_CHART.planMonthlyFill,
-            BRAND_CHART.planQuarterlyFill,
-            BRAND_CHART.planAnnualFill,
-          ],
+          data: planDistribution.map((point) => point.value),
+          backgroundColor: planDistribution.map((point) => {
+            if (point.label === 'Mensual') return BRAND_CHART.planMonthlyFill;
+            if (point.label === 'Trimestral') return BRAND_CHART.planQuarterlyFill;
+            return BRAND_CHART.planAnnualFill;
+          }),
           borderColor: BRAND_CHART.surface,
           borderWidth: 2,
         }],
@@ -457,16 +435,5 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   handleKpiAction(kpi: KPI) {
     if (kpi.label !== 'Pagos Pendientes') return;
     void this.router.navigate(['/app/pagos']);
-  }
-
-  private paymentStatusBadge(estado: string): 'completado' | 'pendiente' | 'otro' {
-    const normalized = (estado ?? '').trim().toLowerCase();
-    if (['completado', 'confirmado', 'approved', 'aprobado', 'success', 'exitoso'].includes(normalized)) {
-      return 'completado';
-    }
-    if (['pendiente', 'pending'].includes(normalized)) {
-      return 'pendiente';
-    }
-    return 'otro';
   }
 }

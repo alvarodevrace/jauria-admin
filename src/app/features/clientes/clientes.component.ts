@@ -57,6 +57,15 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Todos los atletas</span>
         <div class="toolbar-row">
+          <button class="btn btn--ghost btn--sm filters-toggle" type="button" (click)="showFilters.set(!showFilters())">
+            <i-lucide name="settings-2" />
+            <span>Filtros</span>
+          </button>
+          <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">+ Nuevo atleta</button>
+        </div>
+      </div>
+      <div class="filters-panel" [class.filters-panel--open]="showFilters()">
+        <div class="toolbar-row">
           <div class="toolbar-group">
             <button class="btn btn--sm" [class.btn--primary]="view() === 'operativos'" [class.btn--ghost]="view() !== 'operativos'" (click)="setView('operativos')">Operativos</button>
             <button class="btn btn--sm" [class.btn--primary]="view() === 'inactivos'" [class.btn--ghost]="view() !== 'inactivos'" (click)="setView('inactivos')">Inactivos</button>
@@ -78,82 +87,96 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
             <option value="TRIMESTRAL">Trimestral</option>
             <option value="ANUAL">Anual</option>
           </select>
-          <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">+ Nuevo atleta</button>
         </div>
       </div>
 
       @if (loading()) {
         <div style="padding:40px;text-align:center;color:#938C84;">Cargando atletas...</div>
       } @else {
-        <table class="data-table data-table--stacked-mobile">
-          <thead>
-            <tr>
-              <th>Atleta</th>
-              <th>Plan</th>
-              <th>Estado</th>
-              <th>Método</th>
-              <th>Vencimiento</th>
-              <th>Último Pago</th>
-              <th style="text-align:right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of filtered(); track c.id_cliente) {
-              <tr>
-                <td class="data-table__cell--primary" data-label="">
-                  <div class="mobile-primary">{{ c.nombre_completo }}</div>
-                  <div class="mobile-secondary" style="margin-top:2px;">{{ c.email }}</div>
-                  <div class="mobile-secondary">{{ displayPhone(c.telefono_whatsapp) }}</div>
-                </td>
-                <td data-label="Plan">
-                  <span class="badge badge--{{ c.plan.toLowerCase() }}">
-                    {{ c.plan | planLabel : c.monto_plan }}
-                  </span>
-                </td>
-                <td data-label="Estado">
-                  <span class="badge badge--{{ c.estado.toLowerCase() }}">{{ c.estado }}</span>
-                </td>
-                <td data-label="Método" style="font-size:13px;">{{ c.metodo_pago }}</td>
-                <td data-label="Vencimiento">
-                  <span [style.color]="diasColor(c.fecha_vencimiento)" style="font-size:13px;">
-                    {{ c.fecha_vencimiento | dateEc }}
-                  </span>
-                  <div style="font-size:11px;color:#938C84;">{{ diasRestantes(c.fecha_vencimiento) }}</div>
-                </td>
-                <td data-label="Último pago" style="font-size:13px;">{{ c.ultimo_pago_fecha | dateEc }}</td>
-                <td class="data-table__cell--actions" data-label="Acciones">
-                  <div class="data-table__actions mobile-actions" style="justify-content:flex-end;flex-wrap:wrap;">
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Editar atleta" (click)="abrirModal('editar', c)"><i-lucide name="pencil" /></button>
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Ver historial pagos" (click)="verHistorial(c.id_cliente)"><i-lucide name="clipboard" /></button>
-                    <button class="btn btn--ghost btn--sm btn--icon" title="Enviar recordatorio WhatsApp" aria-label="Enviar recordatorio WhatsApp" (click)="enviarRecordatorio(c)">
+        <div class="clientes-accordion">
+          @for (c of filtered(); track c.id_cliente) {
+            <article class="cliente-card" [class.cliente-card--open]="isExpanded(c.id_cliente)">
+              <button
+                type="button"
+                class="cliente-card__summary"
+                (click)="toggleExpanded(c.id_cliente)"
+                [attr.aria-expanded]="isExpanded(c.id_cliente)"
+              >
+                <div class="cliente-card__identity">
+                  <strong>{{ c.nombre_completo }}</strong>
+                </div>
+
+                <div class="cliente-card__summary-side" aria-hidden="true">
+                  <i-lucide class="cliente-card__chevron" [name]="isExpanded(c.id_cliente) ? 'chevron-up' : 'chevron-down'" />
+                </div>
+              </button>
+
+              @if (isExpanded(c.id_cliente)) {
+                <div class="cliente-card__details">
+                  <div class="cliente-card__info-grid">
+                    <div class="cliente-card__info-item">
+                      <span class="cliente-card__info-label">ID atleta</span>
+                      <strong>{{ c.id_cliente }}</strong>
+                    </div>
+                    <div class="cliente-card__info-item">
+                      <span class="cliente-card__info-label">Método de pago</span>
+                      <strong>{{ c.metodo_pago }}</strong>
+                    </div>
+                    <div class="cliente-card__info-item">
+                      <span class="cliente-card__info-label">Último pago</span>
+                      <strong>{{ c.ultimo_pago_fecha | dateEc }}</strong>
+                    </div>
+                    <div class="cliente-card__info-item">
+                      <span class="cliente-card__info-label">Estado de vencimiento</span>
+                      <strong [style.color]="diasColor(c.fecha_vencimiento)">{{ diasRestantes(c.fecha_vencimiento) }}</strong>
+                    </div>
+                    <div class="cliente-card__info-item">
+                      <span class="cliente-card__info-label">Inicio</span>
+                      <strong>{{ c.fecha_inicio | dateEc }}</strong>
+                    </div>
+                    <div class="cliente-card__info-item">
+                      <span class="cliente-card__info-label">Nacimiento</span>
+                      <strong>{{ c.fecha_nacimiento ? (c.fecha_nacimiento | dateEc) : '—' }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="cliente-card__actions">
+                    <button class="btn btn--ghost btn--sm" type="button" (click)="abrirModal('editar', c)">
+                      <i-lucide name="pencil" />
+                      <span>Editar</span>
+                    </button>
+                    <button class="btn btn--ghost btn--sm" type="button" (click)="verHistorial(c.id_cliente)">
+                      <i-lucide name="clipboard" />
+                      <span>Historial</span>
+                    </button>
+                    <button class="btn btn--ghost btn--sm" type="button" (click)="enviarRecordatorio(c)">
                       @if (isReminderBusy(c.id_cliente)) {
                         <i-lucide class="icon-spin" name="settings-2" />
                       } @else {
                         <i-lucide name="send" />
                       }
+                      <span>Recordar</span>
                     </button>
                     <button
                       class="btn btn--sm"
+                      type="button"
                       [class.btn--danger]="c.estado !== 'Inactivo'"
                       [class.btn--secondary]="c.estado === 'Inactivo'"
-                      [title]="c.estado === 'Inactivo' ? 'Reactivar atleta' : 'Dar de baja atleta'"
                       (click)="toggleEstadoCliente(c)"
                       [disabled]="loadingAccion() === c.id_cliente + '_status'"
                     >
-                      {{ loadingAccion() === c.id_cliente + '_status' ? '...' : (c.estado === 'Inactivo' ? 'Reactivar' : 'Dar de baja') }}
+                      <span>{{ loadingAccion() === c.id_cliente + '_status' ? 'Procesando...' : (c.estado === 'Inactivo' ? 'Reactivar' : 'Dar de baja') }}</span>
                     </button>
                   </div>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="7" style="text-align:center;padding:60px;color:#938C84;">
-                  No hay atletas. <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">Crear primer atleta</button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+                </div>
+              }
+            </article>
+          } @empty {
+            <div style="text-align:center;padding:60px;color:#938C84;">
+              No hay atletas. <button class="btn btn--primary btn--sm" (click)="abrirModal('crear')">Crear primer atleta</button>
+            </div>
+          }
+        </div>
       }
     </div>
 
@@ -308,6 +331,167 @@ type ClientesView = 'operativos' | 'inactivos' | 'todos';
       </div>
     }
   `,
+  styles: [`
+    .clientes-accordion {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 18px;
+      align-items: start;
+    }
+
+    .cliente-card {
+      border: 1px solid #2b3033;
+      border-radius: 18px;
+      background: rgba(21, 23, 24, 0.94);
+      overflow: hidden;
+    }
+
+    .cliente-card--open {
+      border-color: rgba(166, 31, 36, 0.5);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    }
+
+    .cliente-card__summary {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      text-align: left;
+    }
+
+    .cliente-card__identity {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .cliente-card__identity strong {
+      color: #f4f1eb;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cliente-card__summary-side {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+
+    .cliente-card__summary-label,
+    .cliente-card__info-label {
+      color: #938c84;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .cliente-card__summary-meta strong,
+    .cliente-card__info-item strong {
+      color: #f4f1eb;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .cliente-card__chevron {
+      width: 18px;
+      height: 18px;
+      color: #938c84;
+      flex-shrink: 0;
+    }
+
+    .cliente-card__details {
+      border-top: 1px solid rgba(43, 48, 51, 0.9);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .cliente-card__info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .cliente-card__info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(244, 241, 235, 0.03);
+      border: 1px solid rgba(244, 241, 235, 0.06);
+      min-width: 0;
+    }
+
+    .cliente-card__actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .cliente-card__actions .btn {
+      width: 100%;
+      justify-content: center;
+      gap: 6px;
+      min-height: 38px;
+      padding: 8px 10px;
+    }
+
+    @media (max-width: 900px) and (min-width: 641px) {
+      .clientes-accordion {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .clientes-accordion {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .cliente-card__info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cliente-card__actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .clientes-accordion {
+        padding: 14px;
+      }
+
+      .cliente-card__summary {
+        padding: 13px 14px;
+      }
+
+      .cliente-card__details {
+        padding: 12px;
+      }
+
+      .cliente-card__info-grid,
+      .cliente-card__actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  `],
 })
 export class ClientesComponent implements OnInit {
   private supabase = inject(SupabaseService);
@@ -322,6 +506,8 @@ export class ClientesComponent implements OnInit {
   loadingAccion = signal('');
   reminderQueueState = signal<Record<string, number>>({});
   view = signal<ClientesView>('operativos');
+  expandedClienteId = signal('');
+  showFilters = signal(false);
   searchTerm = '';
   filterEstado = '';
   filterPlan = '';
@@ -380,6 +566,9 @@ export class ClientesComponent implements OnInit {
     if (this.filterEstado) result = result.filter(c => c.estado === this.filterEstado);
     if (this.filterPlan)   result = result.filter(c => c.plan === this.filterPlan);
     this.filtered.set(result);
+    if (this.expandedClienteId() && !result.some((cliente) => cliente.id_cliente === this.expandedClienteId())) {
+      this.expandedClienteId.set('');
+    }
   }
 
   setView(view: ClientesView) {
@@ -388,6 +577,14 @@ export class ClientesComponent implements OnInit {
     if (view === 'inactivos') this.filterEstado = 'Inactivo';
     if (view === 'todos') this.filterEstado = '';
     this.applyFilter();
+  }
+
+  toggleExpanded(idCliente: string) {
+    this.expandedClienteId.update((current) => current === idCliente ? '' : idCliente);
+  }
+
+  isExpanded(idCliente: string) {
+    return this.expandedClienteId() === idCliente;
   }
 
   // ── Fecha helpers ──────────────────────────────────────────────────────────

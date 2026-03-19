@@ -272,9 +272,7 @@ export class LoginComponent {
       return;
     }
 
-    const rol = this.auth.rol();
-    const dest = rol === 'coach' || rol === 'admin' ? '/app/dashboard' : '/app/novedades';
-    await this.router.navigate([dest]);
+    await this.router.navigate(['/app/novedades']);
     this.loading.set(false);
   }
 

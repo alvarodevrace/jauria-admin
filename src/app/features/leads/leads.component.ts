@@ -50,6 +50,17 @@ interface Lead {
       <div class="data-table-wrapper__header">
         <span class="data-table-wrapper__title">Formulario de Contacto</span>
         <div class="toolbar-row">
+          <button class="btn btn--ghost btn--sm filters-toggle" type="button" (click)="showFilters.set(!showFilters())">
+            <i-lucide name="settings-2" />
+            <span>Filtros</span>
+          </button>
+          @if (auth.canExportLeads()) {
+            <button class="btn btn--ghost btn--sm" (click)="exportCsv()">⬇ Exportar CSV</button>
+          }
+        </div>
+      </div>
+      <div class="filters-panel" [class.filters-panel--open]="showFilters()">
+        <div class="toolbar-row">
           <div class="search-input">
             <input type="text" [placeholder]="auth.isAdmin() ? 'Buscar por nombre, email o teléfono' : 'Buscar por nombre o teléfono'" [(ngModel)]="searchTerm" />
           </div>
@@ -59,9 +70,6 @@ interface Lead {
               <option [value]="programa">{{ programa }}</option>
             }
           </select>
-          @if (auth.canExportLeads()) {
-            <button class="btn btn--ghost btn--sm" (click)="exportCsv()">⬇ Exportar CSV</button>
-          }
         </div>
       </div>
 
@@ -168,6 +176,7 @@ export class LeadsComponent implements OnInit {
   leads = signal<Lead[]>([]);
   loading = signal(true);
   selectedLead = signal<Lead | null>(null);
+  showFilters = signal(false);
   searchTerm = '';
   filterPrograma = '';
 

@@ -204,7 +204,8 @@ export class SupabaseService {
       .select('*, profiles(nombre_completo)')
       .eq('estado_publicacion', 'published')
       .order('published_at', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(8);
 
     if (filters?.tipo) query = query.eq('tipo', filters.tipo);
     return this.withQueryTimeout('getContenidoPublicado', () => query);
@@ -512,10 +513,15 @@ export class SupabaseService {
   }
 
   async getAttendanceRecordsForMonth() {
+    const monthStart = `${getEcuadorTodayYmd().slice(0, 7)}-01`;
+    const nextMonthStart = this.getNextMonthStart(monthStart);
+
     return this.withQueryTimeout('getAttendanceRecordsForMonth', () =>
       this.client.from('inscripciones')
         .select('id, user_id, estado, profiles(id_cliente, nombre_completo, avatar_url), clases(fecha, cancelada)')
         .neq('estado', 'cancelado')
+        .gte('clases.fecha', monthStart)
+        .lt('clases.fecha', nextMonthStart)
         .order('created_at', { ascending: false }),
     );
   }
@@ -679,5 +685,12 @@ export class SupabaseService {
     return this.withQueryTimeout('getRetoLeaderboard', () =>
       this.client.rpc('get_reto_leaderboard', { p_reto_id: retoId }),
     );
+  }
+
+  private getNextMonthStart(monthStart: string) {
+    const [year, month] = monthStart.split('-').map(Number);
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    return `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
   }
 }

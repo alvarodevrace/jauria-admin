@@ -22,6 +22,9 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -31,6 +34,18 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+body > app-root {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: clip;
 }
 
 a {
@@ -49,4 +64,10 @@ input, select, textarea {
 img {
   max-width: 100%;
   display: block;
+}
+
+svg,
+canvas,
+video {
+  max-width: 100%;
 }

@@ -77,6 +77,19 @@ interface ContenidoFormState {
         <span class="data-table-wrapper__title">Contenido creado</span>
 
         <div class="editorial-toolbar">
+          <button class="btn btn--ghost btn--sm filters-toggle" type="button" (click)="showFilters.set(!showFilters())">
+            <i-lucide name="settings-2" />
+            <span>Filtros</span>
+          </button>
+
+          <button class="btn btn--primary" (click)="openCreateModal()">
+            <i-lucide name="check" />
+            Nuevo
+          </button>
+        </div>
+      </div>
+      <div class="filters-panel" [class.filters-panel--open]="showFilters()">
+        <div class="editorial-toolbar">
           <div class="search-input">
             <i-lucide class="icon" name="clipboard" />
             <input
@@ -98,11 +111,6 @@ interface ContenidoFormState {
             <option value="draft">Borradores</option>
             <option value="published">Publicados</option>
           </select>
-
-          <button class="btn btn--primary" (click)="openCreateModal()">
-            <i-lucide name="check" />
-            Nuevo
-          </button>
         </div>
       </div>
 
@@ -454,6 +462,7 @@ export class EventosNoticiasComponent implements OnInit {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal(false);
+  readonly showFilters = signal(false);
   readonly actionLoadingId = signal<number | null>(null);
   readonly items = signal<ContenidoBox[]>([]);
   readonly search = signal('');
