@@ -3,6 +3,8 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 concurrency:
   group: deploy-admin-prod
@@ -31,6 +33,7 @@ jobs:
         run: npm run build
 
       - name: Deploy to Coolify
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST "${{ secrets.COOLIFY_BASE_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_UUID_ADMIN }}&force=true" \
