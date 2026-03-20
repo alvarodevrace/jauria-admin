@@ -1,4 +1,4 @@
-import { ApplicationConfig, ErrorHandler, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, ENVIRONMENT_INITIALIZER, ErrorHandler, importProvidersFrom, inject } from '@angular/core';
 import { provideRouter, withViewTransitions, withRouterConfig } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -41,6 +41,7 @@ import {
 import { routes } from './app.routes';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
+import { GoogleAnalyticsService } from './core/services/google-analytics.service';
 import { environment } from '../environments/environment';
 
 const providers: ApplicationConfig['providers'] = [
@@ -87,6 +88,11 @@ const providers: ApplicationConfig['providers'] = [
       Wallet,
     }),
   ),
+  {
+    provide: ENVIRONMENT_INITIALIZER,
+    multi: true,
+    useValue: () => inject(GoogleAnalyticsService).init(),
+  },
 ];
 
 // Sentry error handler solo si está habilitado y hay DSN configurado

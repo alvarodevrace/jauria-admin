@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 import { ClientsService } from '../../core/services/clients.service';
+import { GoogleAnalyticsService } from '../../core/services/google-analytics.service';
 import { SentryService } from '../../core/services/sentry.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DateEcPipe } from '../../shared/pipes/date-ec.pipe';
@@ -635,6 +636,7 @@ export class ClientesComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private confirmDialog = inject(ConfirmDialogService);
   private clientsService = inject(ClientsService);
+  private analytics = inject(GoogleAnalyticsService);
   private sentry = inject(SentryService);
   private toast = inject(ToastService);
 
@@ -885,6 +887,7 @@ export class ClientesComponent implements OnInit {
       .then(async () => {
         try {
           await firstValueFrom(this.clientsService.sendReminder(c.id_cliente));
+          this.analytics.trackReminderSent(c.id_cliente);
           this.toast.success(`Flujo enviado para ${c.nombre_completo}`);
         } catch (error) {
           this.sentry.captureError(error, { action: 'sendClientReminder', idCliente: c.id_cliente });

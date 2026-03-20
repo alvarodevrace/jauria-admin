@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/auth/auth.service';
+import { GoogleAnalyticsService } from '../../../core/services/google-analytics.service';
 
 @Component({
   selector: 'app-login',
@@ -258,6 +259,7 @@ export class LoginComponent {
 
   private auth = inject(AuthService);
   private router = inject(Router);
+  private analytics = inject(GoogleAnalyticsService);
 
   async onSubmit() {
     if (!this.email || !this.password) return;
@@ -272,6 +274,7 @@ export class LoginComponent {
       return;
     }
 
+    this.analytics.trackLogin();
     await this.router.navigate(['/app/novedades']);
     this.loading.set(false);
   }
